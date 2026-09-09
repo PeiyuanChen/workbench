@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人工作台 · 本地优先开放数据架构</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#020617;color:#e2e8f0;font-family:'JetBrains Mono',monospace;padding:32px 20px;}
+  .wrap{max-width:1180px;margin:0 auto;}
+  header{margin-bottom:22px;}
+  h1{font-size:20px;margin:0 0 6px;display:flex;align-items:center;gap:10px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .sub{color:#94a3b8;font-size:12px;}
+  .diagram-card{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:16px;}
+  svg{width:100%;height:auto;display:block;}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px;}
+  .card{background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:16px;}
+  .card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .card-dot{width:8px;height:8px;border-radius:50%;}
+  .cyan{background:#22d3ee}.emerald{background:#34d399}.violet{background:#a78bfa}.amber{background:#fbbf24}.orange{background:#fb923c}.slate{background:#94a3b8}
+  .card h3{font-size:13px;margin:0;}
+  .card ul{list-style:none;padding:0;margin:0;}
+  .card li{font-size:11px;color:#cbd5e1;line-height:1.7;padding-left:4px;}
+  footer{margin-top:20px;color:#64748b;font-size:10px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1><span class="dot"></span>个人工作台 · 本地优先（Local-First）开放数据架构</h1>
+  <div class="sub">数据层 = Markdown + iCalendar/CalDAV 开放格式，始终在你手里 · 软件只是一层可替换的皮 · 一套后端服务 Web / iOS / Android</div>
+</header>
+
+<div class="diagram-card">
+<svg viewBox="0 0 1120 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#34d399"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#fb923c"/>
+    </marker>
+    <marker id="arrowViolet" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#a78bfa"/>
+    </marker>
+  </defs>
+  <rect width="1120" height="800" fill="#020617"/>
+  <rect width="1120" height="800" fill="url(#grid)"/>
+
+  <!-- ======== 数据主权边界 ======== -->
+  <rect x="40" y="360" width="1040" height="400" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="60" y="382" fill="#fbbf24" font-size="11" font-weight="600">你的设备 / 自托管服务器 —— 数据主权边界（数据始终在此，开放格式，离线可用）</text>
+
+  <!-- ======== 箭头（先画，压在框下） ======== -->
+  <!-- 客户端 -> 协议层 -->
+  <line x1="230" y1="200" x2="300" y2="262" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="230" y1="200" x2="700" y2="262" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="560" y1="200" x2="420" y2="262" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="560" y1="200" x2="780" y2="262" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="890" y1="200" x2="420" y2="262" stroke="#64748b" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  <!-- 协议层 -> 后端 -->
+  <line x1="300" y1="318" x2="230" y2="408" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+  <line x1="780" y1="318" x2="560" y2="408" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+  <!-- 后端 -> 数据层 -->
+  <line x1="230" y1="500" x2="195" y2="598" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowViolet)"/>
+  <line x1="560" y1="500" x2="445" y2="598" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowViolet)"/>
+  <line x1="560" y1="500" x2="695" y2="598" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowViolet)"/>
+  <!-- AI 迁移 -> 数据层（双向，迁入/迁出） -->
+  <line x1="890" y1="500" x2="890" y2="598" stroke="#fb923c" stroke-width="1.6" stroke-dasharray="6,3" marker-end="url(#arrowOrange)"/>
+  <line x1="912" y1="598" x2="912" y2="502" stroke="#fb923c" stroke-width="1.2" stroke-dasharray="3,4" marker-end="url(#arrowOrange)"/>
+  <!-- 数据层 -> Git -->
+  <line x1="700" y1="650" x2="830" y2="650" stroke="#a78bfa" stroke-width="1.3" marker-end="url(#arrowViolet)"/>
+
+  <!-- ======== 层标签 ======== -->
+  <text x="60" y="78" fill="#64748b" font-size="10">① 客户端 / 视图层（可多端、可替换）</text>
+  <text x="60" y="252" fill="#64748b" font-size="10">② 协议 / 接口层（开放标准，中立契约）</text>
+  <text x="60" y="402" fill="#64748b" font-size="10">③ 后端服务层（一层皮：自托管，可换框架重写）</text>
+  <text x="60" y="592" fill="#64748b" font-size="10">④ 数据层（开放格式 · 人类可读 · 你永久持有）</text>
+
+  <!-- ======== ① 客户端层 ======== -->
+  <!-- Web 工作台 -->
+  <rect x="80" y="90" width="300" height="110" rx="6" fill="#0f172a"/>
+  <rect x="80" y="90" width="300" height="110" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="230" y="118" fill="#e2e8f0" font-size="12" text-anchor="middle" font-weight="600">Web 工作台（响应式 PWA）</text>
+  <text x="230" y="138" fill="#94a3b8" font-size="9" text-anchor="middle">四象限 · 待办 · 日历 · 备忘 · 时间线</text>
+  <text x="230" y="156" fill="#64748b" font-size="8" text-anchor="middle">浏览器即用 / 可装成桌面·移动应用</text>
+  <text x="230" y="174" fill="#22d3ee" font-size="8" text-anchor="middle">同一套 API，先做这个</text>
+
+  <!-- 手机端（未来） -->
+  <rect x="410" y="90" width="300" height="110" rx="6" fill="#0f172a"/>
+  <rect x="410" y="90" width="300" height="110" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="560" y="118" fill="#e2e8f0" font-size="12" text-anchor="middle" font-weight="600">手机端（未来 iOS / Android）</text>
+  <text x="560" y="138" fill="#94a3b8" font-size="9" text-anchor="middle">原生壳 / PWA / 或直接用 CalDAV 客户端</text>
+  <text x="560" y="156" fill="#64748b" font-size="8" text-anchor="middle">复用 ②③ 同一后端，不重写数据逻辑</text>
+  <text x="560" y="174" fill="#64748b" font-size="8" text-anchor="middle">后期再做，架构已预留</text>
+
+  <!-- 第三方标准工具 -->
+  <rect x="740" y="90" width="300" height="110" rx="6" fill="#0f172a"/>
+  <rect x="740" y="90" width="300" height="110" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="890" y="118" fill="#e2e8f0" font-size="12" text-anchor="middle" font-weight="600">任意第三方 / 通用工具</text>
+  <text x="890" y="138" fill="#94a3b8" font-size="9" text-anchor="middle">Google·Apple 日历 · Obsidian · 记事本</text>
+  <text x="890" y="156" fill="#64748b" font-size="8" text-anchor="middle">Vikunja / Nextcloud / 任何 Markdown 编辑器</text>
+  <text x="890" y="174" fill="#94a3b8" font-size="8" text-anchor="middle">不装你的 App 也能直接读写数据</text>
+
+  <!-- ======== ② 协议层 ======== -->
+  <rect x="120" y="268" width="360" height="50" rx="6" fill="#0f172a"/>
+  <rect x="120" y="268" width="360" height="50" rx="6" fill="rgba(6,78,59,0.35)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="300" y="290" fill="#e2e8f0" font-size="11" text-anchor="middle" font-weight="600">CalDAV / WebDAV（开放标准 RFC 5545/4791）</text>
+  <text x="300" y="306" fill="#94a3b8" font-size="8" text-anchor="middle">待办 VTODO · 日历 VEVENT · 双向同步</text>
+
+  <rect x="600" y="268" width="380" height="50" rx="6" fill="#0f172a"/>
+  <rect x="600" y="268" width="380" height="50" rx="6" fill="rgba(6,78,59,0.35)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="790" y="290" fill="#e2e8f0" font-size="11" text-anchor="middle" font-weight="600">REST / 文件同步 API（Markdown + 时间线查询）</text>
+  <text x="790" y="306" fill="#94a3b8" font-size="8" text-anchor="middle">读写 notes/ · 按月聚合 timeline/ · 生成视图数据</text>
+
+  <!-- ======== ③ 后端服务层 ======== -->
+  <!-- CalDAV Server -->
+  <rect x="80" y="410" width="300" height="90" rx="6" fill="#0f172a"/>
+  <rect x="80" y="410" width="300" height="90" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="230" y="436" fill="#e2e8f0" font-size="12" text-anchor="middle" font-weight="600">CalDAV 服务器</text>
+  <text x="230" y="455" fill="#94a3b8" font-size="9" text-anchor="middle">Radicale / Xandikos / Vikunja</text>
+  <text x="230" y="472" fill="#64748b" font-size="8" text-anchor="middle">存储·同步 .ics 待办与日历</text>
+  <text x="230" y="488" fill="#64748b" font-size="8" text-anchor="middle">标准协议 → 任何客户端可连</text>
+
+  <!-- 工作台后端 -->
+  <rect x="410" y="410" width="300" height="90" rx="6" fill="#0f172a"/>
+  <rect x="410" y="410" width="300" height="90" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="560" y="436" fill="#e2e8f0" font-size="12" text-anchor="middle" font-weight="600">工作台后端（薄）</text>
+  <text x="560" y="455" fill="#94a3b8" font-size="9" text-anchor="middle">读 Markdown · 四象限归位 · 时间线聚合</text>
+  <text x="560" y="472" fill="#64748b" font-size="8" text-anchor="middle">把开放文件 → 视图 JSON（不存业务数据）</text>
+  <text x="560" y="488" fill="#64748b" font-size="8" text-anchor="middle">Python/FastAPI 或 Node，均可替换</text>
+
+  <!-- AI 迁移 -->
+  <rect x="740" y="410" width="300" height="90" rx="6" fill="#0f172a"/>
+  <rect x="740" y="410" width="300" height="90" rx="6" fill="rgba(251,146,60,0.18)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="890" y="436" fill="#e2e8f0" font-size="12" text-anchor="middle" font-weight="600">AI 迁移 / 转换器（辅助）</text>
+  <text x="890" y="455" fill="#94a3b8" font-size="9" text-anchor="middle">Claude Code 等：迁入 / 迁出脚本</text>
+  <text x="890" y="472" fill="#64748b" font-size="8" text-anchor="middle">TickTick/Routine JSON ⇄ Markdown/.ics</text>
+  <text x="890" y="488" fill="#fb923c" font-size="8" text-anchor="middle">一次性搬运 + 可校验，非数据依赖</text>
+
+  <!-- ======== ④ 数据层 ======== -->
+  <rect x="80" y="600" width="230" height="100" rx="6" fill="#0f172a"/>
+  <rect x="80" y="600" width="230" height="100" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="195" y="628" fill="#e2e8f0" font-size="11" text-anchor="middle" font-weight="600">.ics 待办 + 日历</text>
+  <text x="195" y="647" fill="#94a3b8" font-size="8" text-anchor="middle">VTODO（X-IMPORTANT/URGENT）</text>
+  <text x="195" y="662" fill="#94a3b8" font-size="8" text-anchor="middle">VEVENT 事件 · 无时间待办合法</text>
+  <text x="195" y="682" fill="#a78bfa" font-size="8" text-anchor="middle">纯文本 RFC 5545</text>
+
+  <rect x="330" y="600" width="230" height="100" rx="6" fill="#0f172a"/>
+  <rect x="330" y="600" width="230" height="100" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="445" y="628" fill="#e2e8f0" font-size="11" text-anchor="middle" font-weight="600">notes/*.md 备忘</text>
+  <text x="445" y="647" fill="#94a3b8" font-size="8" text-anchor="middle">YAML frontmatter + Markdown 正文</text>
+  <text x="445" y="662" fill="#94a3b8" font-size="8" text-anchor="middle">tags / related 链接</text>
+  <text x="445" y="682" fill="#a78bfa" font-size="8" text-anchor="middle">纯文本，任意编辑器可开</text>
+
+  <rect x="580" y="600" width="230" height="100" rx="6" fill="#0f172a"/>
+  <rect x="580" y="600" width="230" height="100" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="695" y="628" fill="#e2e8f0" font-size="11" text-anchor="middle" font-weight="600">timeline/YYYY/MM.md</text>
+  <text x="695" y="647" fill="#94a3b8" font-size="8" text-anchor="middle">按月一篇：主线/决策/回顾</text>
+  <text x="695" y="662" fill="#94a3b8" font-size="8" text-anchor="middle">"3月做了什么" 的回溯视图</text>
+  <text x="695" y="682" fill="#a78bfa" font-size="8" text-anchor="middle">纯文本，AI 可直接总结</text>
+
+  <rect x="830" y="600" width="210" height="100" rx="6" fill="#0f172a"/>
+  <rect x="830" y="600" width="210" height="100" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="935" y="628" fill="#e2e8f0" font-size="11" text-anchor="middle" font-weight="600">Git 版本 / 备份</text>
+  <text x="935" y="647" fill="#94a3b8" font-size="8" text-anchor="middle">每次改动可 diff / 回滚</text>
+  <text x="935" y="662" fill="#94a3b8" font-size="8" text-anchor="middle">本地仓库 + 可选远程私有库</text>
+  <text x="935" y="682" fill="#a78bfa" font-size="8" text-anchor="middle">lifelong 历史不丢</text>
+</svg>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-header"><div class="card-dot violet"></div><h3>数据主权（地基）</h3></div>
+    <ul>
+      <li>• 全部数据 = Markdown + .ics 纯文本</li>
+      <li>• 存在你 D 盘 / 自托管服务器，离线可用</li>
+      <li>• 软件关停、换框架：数据原样可读可迁</li>
+      <li>• 四象限/时间线是"视图"，非私有数据结构</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-dot emerald"></div><h3>一套后端，多端复用</h3></div>
+    <ul>
+      <li>• 后端只做"开放文件 → 视图 JSON"</li>
+      <li>• Web 先行（响应式 PWA，手机浏览器也能用）</li>
+      <li>• iOS/Android 后期接同一 API，不重写数据</li>
+      <li>• CalDAV 标准让第三方 App 也能直连</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-dot orange"></div><h3>AI 是帮手不是依赖</h3></div>
+    <ul>
+      <li>• 迁入：旧 App 导出 → AI 转成 .md/.ics</li>
+      <li>• 迁出：开放格式 → AI 转目标产品模板</li>
+      <li>• 源是标准格式，转换可逆、可 diff、可校验</li>
+      <li>• 即使没有 AI，数据本身也能被通用工具打开</li>
+    </ul>
+  </div>
+</div>
+
+<footer>个人工作台 · Local-First Open Data Architecture · 数据层独立于任何应用 · 2026-09</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,34 @@
+[project]
+name = "workbench-backend"
+version = "0.1.0"
+description = "个人工作台后端：本地优先，只读写 data/ 下的 .ics/.md 开放文件（M1 只读）"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "icalendar>=5.1",
+    "python-frontmatter>=1.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+]
+
+[[tool.uv.index]]
+# 国内镜像：pypi.org 直连不稳定
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

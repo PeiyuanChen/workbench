@@ -1,0 +1,26 @@
+# ── 真实用户数据（不入库） ──
+data/users/me/
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+backend/.venv/
+backend/dist/
+*.egg-info/
+
+# ── 前端构建产物 ──
+frontend/dist/
+frontend/node_modules/
+
+# ── 编辑器 / OS ──
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# ── 测试 / 缓存 ──
+.pytest_cache/
+.coverage
+htmlcov/

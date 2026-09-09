@@ -1,0 +1,13 @@
+{
+    "env":
+    {
+        "ANTHROPIC_AUTH_TOKEN": "sk-sp-H.DHRLDH.xQmT.MEQCIH7DYjZy7vJAETxmLq_7-0ByElzfhII5efQdxB_4iuxlAiA7VdTyCUVJEQOkJNokyMfY2GEz2YJtUdDoXh_uv50LjQ",
+        "ANTHROPIC_BASE_URL": "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic",
+        "ANTHROPIC_MODEL": "qwen3.7-max",
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-flash-0731",
+        "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-pro-0813",
+        "ANTHROPIC_DEFAULT_OPUS_MODEL": "qwen3.8-max",
+        "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-v4-flash-0731",
+        "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "983616"
+    }
+}
