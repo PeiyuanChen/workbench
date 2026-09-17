@@ -1,28 +1,9 @@
-"""API 集成测试：TestClient + 临时数据目录（不碰真实 data/）。"""
+"""API 集成测试：TestClient + 临时数据目录（不碰真实 data/）。
 
-import shutil
-from pathlib import Path
+client fixture 在 conftest.py（拷 data-samples 到 {tmp}/users/tester）。
+"""
 
-import pytest
 from fastapi.testclient import TestClient
-
-from app.main import app
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SAMPLES = REPO_ROOT / "data-samples"
-
-
-@pytest.fixture()
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    """把 data-samples 的三类数据拷进 {tmp}/users/tester，环境变量指向它。"""
-    monkeypatch.setenv("WORKBENCH_DATA", str(tmp_path))
-    user_dir = tmp_path / "users" / "tester"
-    (user_dir / "notes").mkdir(parents=True)
-    shutil.copy(SAMPLES / "calendar.ics", user_dir / "calendar.ics")
-    for md in (SAMPLES / "notes").glob("*.md"):
-        shutil.copy(md, user_dir / "notes" / md.name)
-    shutil.copytree(SAMPLES / "timeline", user_dir / "timeline")
-    return TestClient(app)
 
 
 def _get(client: TestClient, path: str, **params):
@@ -57,6 +38,17 @@ def test_todos_filter_status(client: TestClient) -> None:
     body = _get(client, "/api/todos", status="COMPLETED").json()
     # 两条已完成都是子任务（顶层过滤后为空属预期：子任务不独立出现在顶层）
     assert body["count"] == 0
+
+
+def test_todos_default_scope_active(client: TestClient) -> None:
+    """决策 A：缺省 scope=active；样例顶层无完成/放弃项 → 与 M1 行为一致。"""
+    default = _get(client, "/api/todos").json()
+    everything = _get(client, "/api/todos", scope="all").json()
+    archived = _get(client, "/api/todos", scope="archived").json()
+    assert default["count"] == everything["count"] == 11
+    assert archived["count"] == 0
+    # 非法 scope → 422
+    assert _get(client, "/api/todos", scope="bogus").status_code == 422
 
 
 def test_todo_detail_and_404(client: TestClient) -> None:

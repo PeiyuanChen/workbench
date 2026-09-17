@@ -47,11 +47,39 @@ def test_build_tree_progress() -> None:
     parent = next(n for n in tree if "q3-review-parent" in n["uid"])
     assert parent["children_total"] == 3
     assert parent["children_done"] == 2
+    assert parent["children_cancelled"] == 0
     assert abs(parent["progress"] - 2 / 3) < 1e-9
     # 派生字段就位
     assert parent["quadrant"] == "q1"
     child = parent["children"][0]
     assert "quadrant" in child and "overdue" in child
+
+
+def test_progress_excludes_cancelled() -> None:
+    """SPEC-M2 §1：CANCELLED 不计入分母——放弃的子任务不拖累进度。"""
+    todos = [
+        {"uid": "p", "summary": "父", "status": "NEEDS-ACTION"},
+        {"uid": "c1", "summary": "完成", "status": "COMPLETED", "parent_uid": "p"},
+        {"uid": "c2", "summary": "也完成", "status": "COMPLETED", "parent_uid": "p"},
+        {"uid": "c3", "summary": "放弃", "status": "CANCELLED", "parent_uid": "p"},
+        {"uid": "c4", "summary": "进行中", "status": "NEEDS-ACTION", "parent_uid": "p"},
+    ]
+    node = todo_service.build_tree(todos, NOW)[0]
+    assert node["children_total"] == 3, "分母 = 非 CANCELLED 子任务数"
+    assert node["children_done"] == 2
+    assert node["children_cancelled"] == 1
+    assert abs(node["progress"] - 2 / 3) < 1e-9
+    assert len(node["children"]) == 4, "children 数组仍含放弃项（前端样式需要）"
+
+
+def test_progress_all_cancelled_is_none() -> None:
+    todos = [
+        {"uid": "p", "summary": "父", "status": "NEEDS-ACTION"},
+        {"uid": "c1", "summary": "放弃", "status": "CANCELLED", "parent_uid": "p"},
+    ]
+    node = todo_service.build_tree(todos, NOW)[0]
+    assert node["children_total"] == 0 and node["children_cancelled"] == 1
+    assert node["progress"] is None
 
 
 def test_orphan_child_promoted_to_top() -> None:
@@ -77,6 +105,20 @@ def test_filter_unscheduled_and_status() -> None:
     assert len(completed) == 2
     assert todo_service.filter_todos(todos, status="needs-action")
     assert len(todo_service.filter_todos([], unscheduled=True)) == 0
+
+
+def test_filter_scope() -> None:
+    """决策 A：scope 三态（active/archived/all），IN-PROCESS 属活跃。"""
+    todos = [
+        {"uid": "a", "status": "NEEDS-ACTION"},
+        {"uid": "b", "status": "COMPLETED"},
+        {"uid": "c", "status": "CANCELLED"},
+        {"uid": "d", "status": "IN-PROCESS"},
+    ]
+    assert [t["uid"] for t in todo_service.filter_scope(todos)] == ["a", "d"]
+    assert [t["uid"] for t in todo_service.filter_scope(todos, "archived")] == ["b", "c"]
+    assert [t["uid"] for t in todo_service.filter_scope(todos, "all")] == ["a", "b", "c", "d"]
+    assert todo_service.filter_scope([], "archived") == []
 
 
 def test_overdue() -> None:

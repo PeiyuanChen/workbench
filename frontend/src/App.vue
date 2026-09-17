@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
 import { useRoute } from "vue-router";
+import QuickAdd from "./components/QuickAdd.vue";
 import { useUiStore } from "./stores/ui";
 import { useTodosStore } from "./stores/todos";
 import { useEventsStore } from "./stores/events";
@@ -21,11 +22,8 @@ const navItems = [
 
 const title = computed(() => (route.meta?.title as string) ?? "");
 const showQuickadd = computed(() => Boolean(route.meta?.quickadd));
-const quickaddText = computed(() =>
-  route.name === "notes"
-    ? "＋ 快速记一条备忘…（随手写想法/决策，回车新建一篇）"
-    : "＋ 快速记录一件最近要做的事…（先不设时间也可以，回车进入待办）",
-);
+// 备忘视图记笔记，四象限/待办记待办（frontend/CLAUDE.md 界面基准）
+const quickaddMode = computed<"todo" | "note">(() => (route.name === "notes" ? "note" : "todo"));
 
 function reloadAll() {
   useTodosStore().load(ui.user);
@@ -42,7 +40,7 @@ watch(() => ui.user, reloadAll);
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        🗂 我的工作台<small>本地优先 · M1 只读</small>
+        🗂 我的工作台<small>本地优先 · .ics/.md 直读直写</small>
       </div>
       <nav class="nav">
         <router-link v-for="n in navItems" :key="n.to" :to="n.to">
@@ -64,8 +62,10 @@ watch(() => ui.user, reloadAll);
         <h1>{{ title }}</h1>
         <div class="date">{{ todayCN() }}</div>
       </div>
-      <div v-if="showQuickadd" class="quickadd">{{ quickaddText }}</div>
-      <router-view />
+      <QuickAdd v-if="showQuickadd" :mode="quickaddMode" />
+      <div class="view-body">
+        <router-view />
+      </div>
     </main>
   </div>
 </template>

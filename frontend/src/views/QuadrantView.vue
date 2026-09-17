@@ -1,15 +1,37 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+// 四象限视图（M2）：卡片点击开编辑面板；子任务勾选真实可用。
+// 象限 = important×urgent 现场计算的视图（与待办同一份数据，视图≠数据）。
+import { onMounted, ref } from "vue";
+import TodoEditPanel from "../components/TodoEditPanel.vue";
+import { blockText, dueText } from "../lib/format";
 import { useTodosStore } from "../stores/todos";
 import { useUiStore } from "../stores/ui";
-import { blockText, dueText } from "../lib/format";
 import type { Todo } from "../types";
 
 const todos = useTodosStore();
 const ui = useUiStore();
+
+const editingUid = ref<string | null>(null);
+const writeError = ref("");
+const writeBusy = ref("");
+
 onMounted(() => {
   if (!todos.items.length && !todos.loading) todos.load(ui.user);
 });
+
+async function toggleDone(t: Todo) {
+  if (writeBusy.value) return;
+  writeBusy.value = t.uid;
+  writeError.value = "";
+  try {
+    if (t.status === "COMPLETED") await todos.reopen(t.uid, ui.user);
+    else await todos.complete(t.uid, ui.user);
+  } catch (e) {
+    writeError.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    writeBusy.value = "";
+  }
+}
 
 // 四象限 = important×urgent 现场计算的视图（与待办同一份数据）
 const cells = [
@@ -32,28 +54,52 @@ function timeSpans(t: Todo): { cls: string; text: string }[] {
 
 <template>
   <div v-if="todos.error" class="empty">加载失败：{{ todos.error }}</div>
-  <div v-else class="quad">
-    <div v-for="cell in cells" :key="cell.key" class="qcell" :class="cell.cls">
-      <h3>{{ cell.title }}</h3>
-      <div class="hint">{{ cell.hint }}</div>
-      <div v-if="!todos.byQuadrant[cell.key].length" class="hint">（空）</div>
-      <div v-for="t in todos.byQuadrant[cell.key]" :key="t.uid" class="todo-item">
-        <div class="t">
-          {{ t.summary }}
-          <span v-if="t.children_total" class="sub-count">
-            ▸ 子任务 {{ t.children_done }}/{{ t.children_total }}
-          </span>
-        </div>
-        <span v-for="c in t.categories.slice(0, 2)" :key="c" class="tag" :class="cell.tag">{{ c }}</span>
-        <span v-for="(s, i) in timeSpans(t)" :key="i" :class="s.cls" class="mr-1">{{ s.text }}</span>
-        <!-- 子任务展开 -->
-        <div v-if="t.children_total" class="subtask">
-          <div v-for="ch in t.children" :key="ch.uid" class="st">
-            <span class="chk" :class="{ done: ch.status === 'COMPLETED' }"></span>
-            {{ ch.summary }}
+  <div v-else class="quad-page">
+    <div v-if="writeError" class="qa-error" style="margin-bottom: 8px">⚠ {{ writeError }}</div>
+    <div class="quad">
+      <div v-for="cell in cells" :key="cell.key" class="qcell" :class="cell.cls">
+        <h3>{{ cell.title }}</h3>
+        <div class="hint">{{ cell.hint }}</div>
+        <div class="qcell-body">
+          <div v-if="!todos.byQuadrant[cell.key].length" class="hint">（空）</div>
+          <div
+            v-for="t in todos.byQuadrant[cell.key]"
+            :key="t.uid"
+            class="todo-item clickable"
+            title="点击编辑"
+            @click="editingUid = t.uid"
+          >
+            <div class="t">
+              {{ t.summary }}
+              <span v-if="t.children_total" class="sub-count">
+                ▸ 子任务 {{ t.children_done }}/{{ t.children_total }}
+              </span>
+              <button type="button" class="complete-btn"
+                      :class="{ 'is-done': t.status === 'COMPLETED' }"
+                      :disabled="writeBusy === t.uid"
+                      @click.stop="toggleDone(t)">
+                {{ t.status === 'COMPLETED' ? '✓ 恢复' : '◎ 完成' }}
+              </button>
+            </div>
+            <span v-for="c in t.categories.slice(0, 2)" :key="c" class="tag" :class="cell.tag">{{ c }}</span>
+            <span v-for="(s, i) in timeSpans(t)" :key="i" :class="s.cls" class="mr-1">{{ s.text }}</span>
+            <!-- 子任务展开：可独立勾选（联动父进度） -->
+            <div v-if="t.children_total" class="subtask">
+              <div v-for="ch in t.children" :key="ch.uid" class="st" :class="{ cancelled: ch.status === 'CANCELLED' }">
+                <span class="st-sum" title="点击编辑" @click.stop="editingUid = ch.uid">{{ ch.summary }}</span>
+                <button type="button" class="complete-btn"
+                        :class="{ 'is-done': ch.status === 'COMPLETED' }"
+                        :disabled="writeBusy === ch.uid"
+                        @click.stop="toggleDone(ch)">
+                  {{ ch.status === 'COMPLETED' ? '✓ 恢复' : '◎ 完成' }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <TodoEditPanel v-if="editingUid" :uid="editingUid" @close="editingUid = null" />
 </template>

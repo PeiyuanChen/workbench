@@ -1,12 +1,15 @@
 """iCalendar（.ics）读写：VTODO / VEVENT 与文件系统之间的唯一通道。
 
 读：read_calendar(base_dir) → {"todos": [...], "events": [...]}（领域 dict）。
-写：write_calendar(base_dir, data) 整份重建文件（M1 仅用于往返测试；
-    M2 在此基础上扩展增删改）。
+写：write_calendar(base_dir, data) 整份重建文件，走安全写闸门（SPEC-M2 决策 #3）：
+    写前备份（.backup/ 滚动 10 份）→ 原子写 → 写后 icalendar 回读校验，
+    回读失败恢复备份并抛 AtomicWriteError。
 
 原则：
 - 不手拼文本，序列化全部交给 icalendar 库（折行/转义合规，写出的文件
   必须能被 icalendar 重新解析——这是数据主权的底线）。
+- 头部保真：写回时克隆旧文件 VCALENDAR 层属性（如 METHOD:PUBLISH），
+  无旧文件用默认头（与 data-samples 一致）。
 - 时间统一收口 Asia/Shanghai；全天（VALUE=DATE）保持 date 类型。
 - 文件/目录不存在 → 返回空结构，不抛错（me 目录初始为空）。
 """
@@ -27,9 +30,12 @@ from app.core.contract import (
     X_IMPORTANT,
     X_URGENT,
 )
+from app.datastore.atomic import BACKUP_DIRNAME, safe_write
 
 ICS_FILENAME = "calendar.ics"
 SH_TZ = ZoneInfo("Asia/Shanghai")
+# 默认文件头（新建 calendar.ics 时用，与 data-samples/ 样例一致）
+DEFAULT_PRODID = "-//Personal Workbench//Open Data Layer//CN"
 
 
 # ---------------------------------------------------------------- 解析
@@ -198,6 +204,20 @@ def read_calendar(base_dir: Path) -> dict:
     return {"todos": todos, "events": events}
 
 
+def mutate_calendar(base_dir: Path, fn) -> dict:
+    """read-modify-write 事务门面（SPEC-M2 §3）：全程单函数内完成。
+
+    read_calendar → fn(todos, events) 内存增删改（直接修改传入的 list/dict）
+    → write_calendar（安全写闸门）→ 写后重读返回（响应视图以落盘字段为准）。
+    fn 抛异常 → 尚未写盘，文件原样（业务校验必须在 fn 内、写盘前完成）。
+    """
+    base_dir = Path(base_dir)
+    cal = read_calendar(base_dir)
+    fn(cal["todos"], cal["events"])
+    write_calendar(base_dir, cal)
+    return read_calendar(base_dir)
+
+
 # ---------------------------------------------------------------- 序列化
 
 
@@ -290,20 +310,61 @@ def _build_event(e: dict) -> Event:
     return comp
 
 
-def write_calendar(base_dir: Path, data: dict) -> Path:
-    """把领域 dict 写回 {base_dir}/calendar.ics（整份重建）。
+def _load_header_shell(path: Path) -> Calendar | None:
+    """读旧文件做"头部壳"：克隆 VCALENDAR 层属性、清空子组件。
 
-    M1 仅往返测试使用；文件头与样例保持一致（PRODID/VERSION/CALSCALE）。
+    旧文件不存在/为空/解析失败 → 返回 None（用默认头；解析失败场景
+    备份闸门仍会保留损坏现场，不静默吞掉）。
     """
-    cal = Calendar()
-    cal.add("prodid", "-//Personal Workbench//Open Data Layer//CN")
-    cal.add("version", "2.0")
-    cal.add("calscale", "GREGORIAN")
+    if not path.exists():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+        if not text.strip():
+            return None
+        cal = Calendar.from_ical(text)
+    except Exception:  # noqa: BLE001 旧文件损坏不应阻止写新数据（备份留现场）
+        return None
+    cal.subcomponents.clear()
+    return cal
+
+
+def _serialize_calendar(data: dict, header_from: Path | None = None) -> bytes:
+    """领域 dict → ics 字节（整份重建）。
+
+    模块级函数 = 回读失败测试的 monkeypatch 注入点（见 test_ics_store）。
+    header_from 指向旧文件时克隆其头部属性（METHOD:PUBLISH 等保真）。
+    """
+    cal = _load_header_shell(header_from) if header_from is not None else None
+    if cal is None:
+        cal = Calendar()
+        cal.add("prodid", DEFAULT_PRODID)
+        cal.add("version", "2.0")
+        cal.add("calscale", "GREGORIAN")
+        cal.add("method", "PUBLISH")
     for e in data.get("events", []):
         cal.add_component(_build_event(e))
     for t in data.get("todos", []):
         cal.add_component(_build_todo(t))
-    path = Path(base_dir) / ICS_FILENAME
+    return cal.to_ical()
+
+
+def _verify_ics(path: Path) -> None:
+    """回读闸门：新文件必须能被 icalendar 严格重解析，否则视为损坏。"""
+    Calendar.from_ical(path.read_bytes())
+
+
+def write_calendar(base_dir: Path, data: dict) -> Path:
+    """把领域 dict 写回 {base_dir}/calendar.ics（整份重建 + 安全写闸门）。
+
+    SPEC-M2 决策 #3：
+    - 写前备份：旧文件 → {base_dir}/.backup/calendar-<UTC时间戳>.ics，滚动 10 份；
+    - 原子写：calendar.ics.tmp → fsync → os.replace()；
+    - 写后回读：Calendar.from_ical() 重解析，失败恢复备份并抛 AtomicWriteError。
+    """
+    base_dir = Path(base_dir)
+    path = base_dir / ICS_FILENAME
+    raw = _serialize_calendar(data, header_from=path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(cal.to_ical())
+    safe_write(path, raw, verify=_verify_ics, backup_dir=base_dir / BACKUP_DIRNAME)
     return path

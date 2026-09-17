@@ -1,16 +1,21 @@
-"""datastore.ics_store 测试：解析 + 写回往返。
+"""datastore.ics_store 测试：解析 + 写回往返 + M2 安全写闸门。
 
-关键校验（CLAUDE.md 质量要求）：
+关键校验（CLAUDE.md 质量要求 + SPEC-M2 §3）：
 - 写出的 .ics 必须能被 icalendar 库重新解析；
 - 中文 SUMMARY/DESCRIPTION 往返后字段等值；
-- 时间三阶段、四象限标签、父子任务解析正确。
+- 时间三阶段、四象限标签、父子任务解析正确；
+- M2：头部保真（METHOD:PUBLISH）、往返 diff（改一条其余无损）、
+  回读失败恢复（旧文件字节不变）、写前备份滚动。
 """
 
+import copy
 from pathlib import Path
 
+import pytest
 from icalendar import Calendar
 
 from app.datastore import ics_store
+from app.datastore.atomic import AtomicWriteError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SAMPLES = REPO_ROOT / "data-samples"
@@ -149,3 +154,92 @@ def test_chinese_roundtrip(tmp_path: Path) -> None:
     ics_store.write_calendar(tmp_path, {"todos": [todo], "events": []})
     reread = ics_store.read_calendar(tmp_path)
     assert reread["todos"][0] == todo
+
+
+# ---------------------------------------------------------------- M2：安全写闸门
+
+
+def test_write_calendar_header_fidelity(me_snapshot_dir: Path) -> None:
+    """头部保真：真实 me 文件（含 METHOD:PUBLISH）写回后头部属性不丢。"""
+    data = ics_store.read_calendar(me_snapshot_dir)
+    ics_store.write_calendar(me_snapshot_dir, data)
+    raw = (me_snapshot_dir / ics_store.ICS_FILENAME).read_text(encoding="utf-8")
+    for prop in (
+        "METHOD:PUBLISH",
+        "PRODID:-//Personal Workbench//Open Data Layer//CN",
+        "VERSION:2.0",
+        "CALSCALE:GREGORIAN",
+    ):
+        assert prop in raw, f"头部属性丢失: {prop}"
+
+
+def test_write_calendar_default_header_for_new_file(tmp_path: Path) -> None:
+    """首写（无旧文件）：默认头与 data-samples 一致（含 METHOD:PUBLISH）。"""
+    path = ics_store.write_calendar(tmp_path, {"todos": [], "events": []})
+    raw = path.read_text(encoding="utf-8")
+    assert "VERSION:2.0" in raw and "METHOD:PUBLISH" in raw
+    assert "PRODID:-//Personal Workbench//Open Data Layer//CN" in raw
+
+
+def test_write_calendar_roundtrip_diff_untouched(me_snapshot_dir: Path) -> None:
+    """往返 diff（SPEC-M2 §3）：只改一条，其余组件逐字段无损。
+
+    fixture = me 的 M1 快照（5 条真实待办，1 父 2 子）。
+    """
+    before = ics_store.read_calendar(me_snapshot_dir)
+    data = copy.deepcopy(before)
+    target = data["todos"][1]  # 第 2 条（学习Claude Code）
+    target["summary"] = "改过的摘要"
+    target["due"] = "2026-10-01T09:00:00+08:00"
+    ics_store.write_calendar(me_snapshot_dir, data)
+    after = ics_store.read_calendar(me_snapshot_dir)
+
+    # uid 集合不变
+    assert {t["uid"] for t in after["todos"]} == {t["uid"] for t in before["todos"]}
+    # 被改条：summary/due 更新，其余 14 个字段不变
+    changed = next(t for t in after["todos"] if t["uid"] == target["uid"])
+    assert changed["summary"] == "改过的摘要"
+    assert changed["due"] == "2026-10-01T09:00:00+08:00"
+    for k, v in before["todos"][1].items():
+        if k in ("summary", "due"):
+            continue
+        assert changed[k] == v, f"字段 {k} 意外变化: {changed[k]!r} != {v!r}"
+    # 其余 4 条逐条 dict 全等
+    for b in before["todos"]:
+        if b["uid"] == target["uid"]:
+            continue
+        a = next(t for t in after["todos"] if t["uid"] == b["uid"])
+        assert a == b, f"未修改组件字段丢失: {b['uid']}"
+    assert after["events"] == before["events"]
+    # 父子关系保真：RELATED-TO;RELTYPE=CHILD 原文仍在
+    raw = (me_snapshot_dir / ics_store.ICS_FILENAME).read_text(encoding="utf-8")
+    assert raw.count("RELTYPE=CHILD") == 2
+
+
+def test_write_calendar_creates_rolling_backup(me_snapshot_dir: Path) -> None:
+    data = ics_store.read_calendar(me_snapshot_dir)
+    bak = me_snapshot_dir / ".backup"
+    assert not bak.exists(), "首写前无备份目录"
+    ics_store.write_calendar(me_snapshot_dir, data)
+    assert len(list(bak.glob("calendar-*.ics"))) == 1
+    ics_store.write_calendar(me_snapshot_dir, data)
+    assert len(list(bak.glob("calendar-*.ics"))) == 2
+
+
+def test_write_calendar_verify_failure_recovers(
+    me_snapshot_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """回读闸门：序列化损坏 → AtomicWriteError，旧文件字节不变、备份保留。"""
+    original = (me_snapshot_dir / ics_store.ICS_FILENAME).read_bytes()
+    data = ics_store.read_calendar(me_snapshot_dir)
+    # 注入点：模块级 _serialize_calendar 产出非法字节
+    monkeypatch.setattr(ics_store, "_serialize_calendar", lambda *a, **kw: b"BROKEN NOT-ICS")
+    with pytest.raises(AtomicWriteError):
+        ics_store.write_calendar(me_snapshot_dir, data)
+    assert (me_snapshot_dir / ics_store.ICS_FILENAME).read_bytes() == original
+    assert len(list((me_snapshot_dir / ".backup").glob("calendar-*.ics"))) == 1
+
+
+def test_write_calendar_no_tmp_leftover(me_snapshot_dir: Path) -> None:
+    ics_store.write_calendar(me_snapshot_dir, ics_store.read_calendar(me_snapshot_dir))
+    assert list(me_snapshot_dir.glob("*.tmp")) == []

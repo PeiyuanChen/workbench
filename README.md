@@ -21,7 +21,7 @@
 没有本应用，这些文件也能用记事本、Obsidian、Apple/Google 日历、任意 CalDAV 客户端打开。
 **软件只是一层皮**：直接用文本编辑器改 `calendar.ics`，刷新页面即生效。
 
-当前为 **M1（只读）**：后端只读文件返回 JSON，前端渲染；增删改请直接把数据写进文件（M2 才提供写接口）。
+当前为 **M2（可写）**：后端读写 `.ics`/`.md` 文件，前端支持快速记录与编辑交互。
 
 ## 目录结构
 
@@ -87,7 +87,7 @@ npm run dev
    - `me` —— 你自己的数据目录（初始为空，各视图显示空态）。
 3. 想看到自己的真实数据：把 `.ics` / `.md` 文件放进 `data/users/me/`（结构见上表），刷新页面即可；或用文本编辑器直接改文件，刷新即变。
 
-### 只读 API（M1）
+### API
 
 | 端点 | 说明 |
 | --- | --- |
@@ -98,13 +98,29 @@ npm run dev
 | `GET /api/timeline/{year}/{month}?user=` | 时间线（未生成返回 `exists:false`） |
 | `GET /api/notes?user=` / `GET /api/notes/{id}?user=` | 备忘列表 / 详情 |
 
+| 端点 | 说明 |
+| --- | --- |
+| `POST /api/todos` | 新建待办 |
+| `PATCH /api/todos/{uid}` | 更新待办（不接受 status） |
+| `POST /api/todos/{uid}/complete` | 勾选完成 |
+| `POST /api/todos/{uid}/reopen` | 取消完成 / 恢复放弃 |
+| `POST /api/todos/{uid}/abandon` | 放弃 |
+| `DELETE /api/todos/{uid}` | 物理删除（级联子任务） |
+| `GET /api/events/{uid}` | 单条事件详情 |
+| `POST /api/events` | 新建事件 |
+| `PATCH /api/events/{uid}` | 更新事件 |
+| `DELETE /api/events/{uid}` | 删除事件 |
+| `POST /api/notes` | 新建备忘 |
+| `PUT /api/notes/{id}` | 全文更新备忘 |
+| `DELETE /api/notes/{id}` | 删除备忘 |
+
 `user` 参数缺省取 `WORKBENCH_USER`（默认 `me`）。示例：
 `http://127.0.0.1:8000/api/todos?user=example`
 
 ## 测试与校验
 
 ```bash
-# 后端单元/集成测试（45 项：读写往返、中文折行、象限归位、父子进度、跨月裁剪、API）
+# 后端单元/集成测试（148 项：读写往返、中文折行、象限归位、父子进度、跨月裁剪、API、原子写、状态机）
 cd backend && uv run pytest        # 或 .venv 下：python -m pytest
 
 # 数据契约校验（字段合法性、UID 唯一、frontmatter 完整）
@@ -114,7 +130,7 @@ python data-samples/validate.py data/users/example
 ## 里程碑
 
 - **M1（已完成）**：只读后端 + 五视图前端，能看到自己的真实数据。
-- **M2**：写接口（待办/事件/备忘增删改）+ 接入 Radicale（CalDAV）。
+- **M2（已完成）**：写接口（待办/事件/备忘增删改）+ 前端快速记录与编辑交互。Radicale/CalDAV 推迟到 M3。
 - **M3**：时间线 LLM 生成；旧数据（TickTick 等）AI 迁入。
 - **M4**：自托管 + PWA 手机端 + 可选日历双向同步。
 

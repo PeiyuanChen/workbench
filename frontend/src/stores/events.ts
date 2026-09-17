@@ -1,11 +1,15 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
-import { getJson } from "../api/client";
-import type { CalendarItem } from "../types";
+import { delJson, getJson, patchJson, postJson } from "../api/client";
+import type { CalendarItem, EventCreate, EventDetail, EventPatch } from "../types";
 
 interface EventsResp {
   month: string;
   items: CalendarItem[];
+}
+
+interface DeleteResp {
+  deleted: string[];
 }
 
 export const useEventsStore = defineStore("events", () => {
@@ -59,5 +63,31 @@ export const useEventsStore = defineStore("events", () => {
     month.value = m;
   }
 
-  return { year, month, monthKey, items, loading, error, byDay, load, shift };
+  /** 编辑表单数据源：GET /api/events/{uid}（含 dtend/description/alarms） */
+  async function fetchOne(uid: string, user: string): Promise<EventDetail> {
+    return getJson<EventDetail>(`events/${encodeURIComponent(uid)}`, { user });
+  }
+
+  // 写 action：成功后一律重拉当前 monthKey 聚合——月聚合是现场计算的视图
+  // （视图 ≠ 数据），跨月编辑/删除也能得到正确的当月结果；失败抛给调用方。
+
+  async function create(payload: EventCreate, user: string): Promise<EventDetail> {
+    const e = await postJson<EventDetail>("events", payload, { user });
+    await load(user);
+    return e;
+  }
+
+  async function patch(uid: string, payload: EventPatch, user: string): Promise<EventDetail> {
+    const e = await patchJson<EventDetail>(`events/${encodeURIComponent(uid)}`, payload, { user });
+    await load(user);
+    return e;
+  }
+
+  async function remove(uid: string, user: string): Promise<string[]> {
+    const data = await delJson<DeleteResp>(`events/${encodeURIComponent(uid)}`, { user });
+    await load(user);
+    return data.deleted;
+  }
+
+  return { year, month, monthKey, items, loading, error, byDay, load, shift, fetchOne, create, patch, remove };
 });

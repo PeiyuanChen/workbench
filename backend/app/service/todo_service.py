@@ -16,8 +16,12 @@ from app.core.contract import (
     STAGE_BOTH,
     STAGE_DUE,
     STAGE_UNSCHEDULED,
+    STATUS_CANCELLED,
     STATUS_COMPLETED,
 )
+
+# 归档态（决策 A / SPEC-M2 决策 #9）：默认从主列表消失，进"已完成"归档区
+ARCHIVED_STATUSES = (STATUS_COMPLETED, STATUS_CANCELLED)
 
 
 def classify(todo: dict) -> str:
@@ -81,7 +85,10 @@ def enrich(todo: dict, now: datetime | None = None) -> dict:
 def build_tree(todos: list[dict], now: datetime | None = None) -> list[dict]:
     """构建父子树（默认两级）：子任务挂到父的 children[]，父带进度。
 
-    - 父任务进度 = 子任务完成率；无子任务 progress=None。
+    - 进度口径（SPEC-M2 §1）：CANCELLED 不计入分母——放弃的子任务不拖累进度。
+      children[] 仍含全部子任务（前端"已放弃"样式需要）；
+      children_total = 非 CANCELLED 数，children_done = COMPLETED 数，
+      children_cancelled = CANCELLED 数；无有效子任务 progress=None。
     - 孤儿（parent_uid 指向不存在的任务）提升为顶层，避免数据丢失。
     - 孙辈（子任务再被引用）不展开，防止超过两级。
     返回顶层任务列表（保持原顺序），每个节点（含 children 内）均已 enrich。
@@ -100,12 +107,32 @@ def build_tree(todos: list[dict], now: datetime | None = None) -> list[dict]:
         children = [
             enrich(c, now) for c in todos if c.get("parent_uid") == t.get("uid") and c["uid"] in child_uids
         ]
+        effective = [c for c in children if c.get("status") != STATUS_CANCELLED]
         node["children"] = children
-        node["children_total"] = len(children)
-        node["children_done"] = sum(1 for c in children if c.get("status") == STATUS_COMPLETED)
-        node["progress"] = (node["children_done"] / len(children)) if children else None
+        node["children_total"] = len(effective)
+        node["children_done"] = sum(1 for c in effective if c.get("status") == STATUS_COMPLETED)
+        node["children_cancelled"] = len(children) - len(effective)
+        node["progress"] = (node["children_done"] / len(effective)) if effective else None
         top.append(node)
     return top
+
+
+def filter_scope(todos: list[dict], scope: str = "active") -> list[dict]:
+    """归档范围过滤（决策 A）：只作用于顶层列表，children[] 不受影响。
+
+    - active（默认）：排除 COMPLETED/CANCELLED——完成/放弃项从主列表消失；
+    - archived：只返回 COMPLETED/CANCELLED——"已完成"归档区数据源；
+    - all：不过滤（M1 行为，验收比对用）。
+    """
+    if scope == "all":
+        return list(todos)
+
+    def is_archived(t: dict) -> bool:
+        return (t.get("status") or "").upper() in ARCHIVED_STATUSES
+
+    if scope == "archived":
+        return [t for t in todos if is_archived(t)]
+    return [t for t in todos if not is_archived(t)]
 
 
 def filter_todos(
