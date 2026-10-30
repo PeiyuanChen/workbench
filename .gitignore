@@ -27,3 +27,6 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# ── 一键启动 dev.sh 产生的运行日志 ──
+.dev-*.log

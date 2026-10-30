@@ -42,6 +42,9 @@ workbench/
 - Python **3.11+**（推荐用 [uv](https://github.com/astral-sh/uv) 管理）
 - Node.js **18+**
 
+## 一键启动（不推荐，自用，windows）
+bash scripts/dev.sh      # 停止：该窗口 Ctrl+C
+
 ## 启动后端
 
 ```bash
