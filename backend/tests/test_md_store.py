@@ -36,6 +36,34 @@ def test_title_and_excerpt(tmp_path: Path) -> None:
     assert note["excerpt"] == "第一段正文,作摘要。"
 
 
+def test_excerpt_skips_image_and_table_lines(tmp_path: Path) -> None:
+    body = (
+        "# 图文笔记\n\n"
+        "![](assets/20261030-101010-abcd1234.png)\n\n"
+        "图片下面的正文，应当成为摘要。\n"
+    )
+    _write_note(tmp_path / "notes", "2026-10-30-图文.md", "n-img", body)
+
+    table = (
+        "# 表格笔记\n\n"
+        "| 列1 | 列2 |\n"
+        "| --- | --- |\n"
+        "| 1 | 2 |\n"
+    )
+    _write_note(tmp_path / "notes", "2026-10-30-表格.md", "n-tbl", table)
+    notes = {n["id"]: n for n in md_store.list_notes(tmp_path)}
+    # 分隔行被跳过，表头行竖线转空格成为摘要
+    assert notes["n-img"]["excerpt"] == "图片下面的正文，应当成为摘要。"
+    assert notes["n-tbl"]["excerpt"] == "列1 列2"
+
+
+def test_excerpt_link_text_kept(tmp_path: Path) -> None:
+    body = "# 链接笔记\n\n[点击这里](https://example.com/page) 后面的字"
+    _write_note(tmp_path / "notes", "2026-10-30-链接.md", "n-link", body)
+    note = md_store.list_notes(tmp_path)[0]
+    assert note["excerpt"] == "点击这里 后面的字"
+
+
 def test_get_note_by_id_and_content(tmp_path: Path) -> None:
     _write_note(tmp_path / "notes", "2026-09-03-某篇.md", "n-1", "# 某篇\n\n正文内容。")
     note = md_store.get_note(tmp_path, "n-1")

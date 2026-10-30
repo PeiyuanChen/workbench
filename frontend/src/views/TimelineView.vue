@@ -2,6 +2,7 @@
 import { onMounted, watch } from "vue";
 import { useTimelineStore } from "../stores/timeline";
 import { useUiStore } from "../stores/ui";
+import MarkdownView from "../components/MarkdownView.vue";
 
 const tl = useTimelineStore();
 const ui = useUiStore();

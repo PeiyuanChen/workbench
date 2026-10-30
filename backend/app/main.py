@@ -10,7 +10,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import routes_events, routes_health, routes_notes, routes_timeline, routes_todos
+from app.api import (
+    routes_assets,
+    routes_events,
+    routes_health,
+    routes_notes,
+    routes_timeline,
+    routes_todos,
+)
 from app.core.errors import ApiError
 from app.datastore.atomic import AtomicWriteError
 
@@ -71,4 +78,5 @@ app.include_router(routes_health.router)
 app.include_router(routes_todos.router)
 app.include_router(routes_events.router)
 app.include_router(routes_notes.router)
+app.include_router(routes_assets.router)
 app.include_router(routes_timeline.router)

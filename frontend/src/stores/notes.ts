@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { delJson, getJson, postJson, putJson } from "../api/client";
-import type { Note, NoteCreate, NoteUpdate } from "../types";
+import { delJson, getJson, postForm, postJson, putJson } from "../api/client";
+import type { AssetUpload, Note, NoteCreate, NoteUpdate } from "../types";
 
 interface NotesResp {
   count: number;
@@ -52,6 +52,13 @@ export const useNotesStore = defineStore("notes", () => {
     return note;
   }
 
+  /** POST /api/notes/assets：multipart 上传图片，返回服务端生成的资产信息 */
+  async function uploadAsset(file: File, user: string): Promise<AssetUpload> {
+    const form = new FormData();
+    form.append("file", file);
+    return postForm<AssetUpload>("notes/assets", form, { user });
+  }
+
   /** DELETE /api/notes/{id}：物理删除（服务端删除前已备份到 notes/.backup/） */
   async function remove(id: string, user: string) {
     await delJson<{ id: string }>(`notes/${encodeURIComponent(id)}`, { user });
@@ -59,5 +66,5 @@ export const useNotesStore = defineStore("notes", () => {
     if (current.value?.id === id) current.value = null;
   }
 
-  return { items, current, loading, error, load, open, close, create, update, remove };
+  return { items, current, loading, error, load, open, close, create, update, uploadAsset, remove };
 });

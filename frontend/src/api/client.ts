@@ -46,7 +46,14 @@ export async function getJson<T>(path: string, params: Params = {}): Promise<T> 
   return (await res.json()) as T;
 }
 
-/** 写请求通用：解 {"ok","data"} 信封，直接返回 data（受影响的最新对象） */
+/** 解 {"ok","data"} 写信封，直接返回 data（受影响的最新对象） */
+async function unwrapEnvelope<T>(res: Response, url: string): Promise<T> {
+  const envelope = (await res.json()) as { ok?: boolean; data?: T };
+  if (!envelope.ok) throw new ApiError(res.status, `接口 ${url} 未返回成功信封`);
+  return envelope.data as T;
+}
+
+/** JSON 写请求通用（Content-Type 固定 application/json） */
 async function sendJson<T>(method: string, path: string, body: unknown, params: Params): Promise<T> {
   const url = buildUrl(path, params);
   const res = await fetch(url, {
@@ -55,9 +62,15 @@ async function sendJson<T>(method: string, path: string, body: unknown, params: 
     body: JSON.stringify(body ?? {}),
   });
   if (!res.ok) await parseError(res, url);
-  const envelope = (await res.json()) as { ok?: boolean; data?: T };
-  if (!envelope.ok) throw new ApiError(res.status, `接口 ${url} 未返回成功信封`);
-  return envelope.data as T;
+  return unwrapEnvelope<T>(res, url);
+}
+
+/** multipart 写请求（图片上传）：刻意不设 Content-Type，浏览器自动带 boundary */
+export async function postForm<T>(path: string, form: FormData, params: Params = {}): Promise<T> {
+  const url = buildUrl(path, params);
+  const res = await fetch(url, { method: "POST", body: form });
+  if (!res.ok) await parseError(res, url);
+  return unwrapEnvelope<T>(res, url);
 }
 
 export function postJson<T>(path: string, body: unknown, params: Params = {}): Promise<T> {

@@ -29,15 +29,37 @@ EXCERPT_MAX = 80
 _FILENAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$")
 # 正文首个一级标题 → 标题
 _H1_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
+# 摘要清洗：图片整段删、链接取文字、去强调/代码/方括号标记、空白折叠
+_IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_MARK_CHARS_RE = re.compile(r"[*_`\[\]]")
+_WS_RE = re.compile(r"\s+")
+
+
+def _is_table_separator(line: str) -> bool:
+    """表格分隔行（如 | --- | :---: |）：含 | 且整行仅由 | - : 空白组成。"""
+    return "|" in line and not re.sub(r"[\s|:\-]", "", line)
 
 
 def _excerpt(body: str) -> str:
-    """摘取正文第一段非标题文本作为摘要（截断到 80 字）。"""
-    for line in body.splitlines():
-        line = line.strip()
+    """摘取正文第一段有效文本作为摘要（截断到 80 字）。
+
+    富文本适配：跳过标题/引言/表格分隔行；图片行清空后继续下一行；
+    链接取链接文字；表格竖线转空格。清理后为空的行继续向下找。
+    """
+    for raw in body.splitlines():
+        line = raw.strip()
         if not line or line.startswith("#") or line.startswith(">"):
             continue
-        text = re.sub(r"[*_`\[\]]", "", line)  # 去掉常见 Markdown 标记
+        if _is_table_separator(line):
+            continue
+        text = _IMAGE_RE.sub("", line)
+        text = _LINK_RE.sub(r"\1", text)
+        text = _MARK_CHARS_RE.sub("", text)
+        text = text.replace("|", " ")
+        text = _WS_RE.sub(" ", text).strip()
+        if not text:
+            continue
         return text[:EXCERPT_MAX]
     return ""
 

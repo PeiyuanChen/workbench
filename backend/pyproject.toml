@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "icalendar>=5.1",
     "python-frontmatter>=1.1",
+    "python-multipart>=0.0.32",
 ]
 
 [dependency-groups]

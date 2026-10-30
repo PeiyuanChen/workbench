@@ -71,6 +71,14 @@ export interface Note {
   content?: string; // 仅详情/写响应返回
 }
 
+/** 图片上传响应（POST /api/notes/assets 的 data） */
+export interface AssetUpload {
+  name: string;
+  path: string; // 形如 assets/20261030-…png
+  size: number;
+  content_type: string;
+}
+
 export interface TimelineResp {
   exists: boolean;
   message?: string;
