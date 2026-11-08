@@ -217,9 +217,16 @@ body {
 .md-toolbar .md-sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
 .md-toolbar .qa-error { font-size: 12px; }
 
-/* 写作/预览分屏（窄屏上下堆叠） */
-.note-edit-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; align-items: stretch; }
-@media (max-width: 900px) { .note-edit-split { grid-template-columns: 1fr; } }
+/* 共享 Markdown 编辑器（#5）：三模式布局；split 窄屏上下堆叠 */
+.md-editor { margin-top: 10px; }
+.md-mode-switch { display: inline-flex; gap: 2px; }
+.md-mode-switch button { padding: 3px 8px; }
+.md-mode-switch button.on { border-color: var(--accent); color: var(--accent); background: var(--blue-bg); }
+.md-editor-body { display: grid; gap: 12px; margin-top: 10px; align-items: stretch; }
+.md-editor-body.is-split { grid-template-columns: 1fr 1fr; }
+.md-editor-body.is-edit,
+.md-editor-body.is-preview { grid-template-columns: 1fr; }
+@media (max-width: 900px) { .md-editor-body.is-split { grid-template-columns: 1fr; } }
 .note-editor {
   width: 100%; margin: 0; border: 1px solid var(--line); border-radius: 8px;
   padding: 12px 14px; font-size: 13px; line-height: 1.9; font-family: inherit;
@@ -422,3 +429,44 @@ body {
   opacity: 0.2;
   cursor: default;
 }
+
+/* ============================================================
+   #5 笔记视图：文件夹树 + 列表（窄屏 900px 断点上下堆叠）
+   ============================================================ */
+.notes-view { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .notes-view { grid-template-columns: 1fr; } }
+.notes-tree-panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 8px;
+}
+.tree-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; font-weight: 700; padding: 4px 8px 8px;
+}
+.tree-node {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  padding: 7px 10px; border-radius: 8px; font-size: 13px; cursor: pointer;
+}
+.tree-node:hover { background: var(--slate-bg); }
+.tree-node.on { background: var(--blue-bg); color: var(--blue); font-weight: 600; }
+.tree-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-count {
+  flex-shrink: 0; font-size: 11px; color: var(--slate);
+  background: var(--slate-bg); border-radius: 20px; padding: 1px 8px;
+}
+.tree-node.on .tree-count { background: #fff; color: var(--blue); }
+.tree-actions { display: none; flex-shrink: 0; gap: 2px; }
+.tree-node:hover .tree-actions { display: inline-flex; }
+.tree-node:hover .tree-count { display: none; }
+.tree-act { border: 0; background: none; cursor: pointer; font-size: 12px; padding: 0 2px; }
+.tree-empty { font-size: 12px; color: var(--slate); padding: 8px 10px; }
+.notes-main { min-width: 0; }
+.notes-list-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
+.notes-list-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.folder-badge { vertical-align: middle; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-select {
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px;
+  font-size: 12px; outline: none; background: #fff; color: var(--ink);
+  max-width: 320px;
+}
+.folder-select:focus { border-color: var(--accent); }

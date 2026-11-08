@@ -27,6 +27,12 @@ const PROTO_RE = /^[a-z][a-z0-9+.-]*:/i;
  * 把正文中的相对 assets/ 图片改写到后端图片接口。
  * 必须改写：hash 路由页面 URL 是 /#/memos，相对 "assets/x.png" 会被浏览器
  * 解析成 /assets/x.png（不在 /api 代理下，404）。
+ * 三种相对前缀都认（与后端 _ASSET_LINK_RE 对齐）：
+ *   备忘/根层笔记 assets/x.png；./assets/x.png；
+ *   多层文件夹笔记 ../../assets/x.png（深度前缀只用于文件系统导航，
+ *   HTTP 端点仍是平铺的 /api/{模块}/assets/<名>，改写时整段丢弃）。
+ * 注意 imageBase 已含末尾 /assets，正文里的 assets/ 段是磁盘目录名、
+ * 不是 URL 段，拼 URL 时必须剥掉（否则双 assets 段 → 404）。
  * 返回 null 表示不动（外链/绝对路径/异常路径）。
  */
 function rewriteAssetSrc(src: string): string | null {
@@ -37,8 +43,11 @@ function rewriteAssetSrc(src: string): string | null {
     return null;
   }
   if (s.startsWith("./")) s = s.slice(2);
-  const parts = s.split("/");
-  if (parts[0] !== "assets" || parts.some((p) => p === ".." || p === "")) return null;
+  // 仅允许「任意层 ../ 前缀 + assets/ + 余下名字」，捕获组 2 即去掉 assets/ 段后的名字
+  const m = /^((?:\.\.\/)*)assets\/(.+)$/.exec(s);
+  if (!m) return null;
+  const parts = m[2].split("/");
+  if (parts.some((p) => p === ".." || p === "")) return null;
   const encoded = parts.map(encodeURIComponent).join("/");
   const qs = props.user ? `?user=${encodeURIComponent(props.user)}` : "";
   return `${props.imageBase}/${encoded}${qs}`;

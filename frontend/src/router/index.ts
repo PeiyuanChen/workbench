@@ -10,6 +10,8 @@ export const routes: RouteRecordRaw[] = [
   { path: "/calendar", name: "calendar", component: () => import("../views/CalendarView.vue"), meta: { title: "日历" } },
   { path: "/timeline", name: "timeline", component: () => import("../views/TimelineView.vue"), meta: { title: "时间线" } },
   { path: "/memos", name: "memos", component: () => import("../views/MemosView.vue"), meta: { title: "备忘", quickadd: true } },
+  // 笔记不接 QuickAdd（#5）：无 quickadd meta
+  { path: "/notes", name: "notes", component: () => import("../views/NotesView.vue"), meta: { title: "笔记" } },
 ];
 
 const router = createRouter({

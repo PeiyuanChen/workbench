@@ -37,3 +37,8 @@ export function todayCN(now = new Date()): string {
   const weeks = ["日", "一", "二", "三", "四", "五", "六"];
   return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 周${weeks[now.getDay()]}`;
 }
+
+/** catch 子句统一取错误文案（ApiError.message 即后端中文 detail，可直接展示） */
+export function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}

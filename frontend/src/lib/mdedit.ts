@@ -101,3 +101,27 @@ export function insertBlock(s: EditState, block: string, focus: [number, number]
   const base = at + insert.indexOf(block); // block 在 insert 内的起点
   return { value: next, selStart: base + focus[0], selEnd: base + focus[1] };
 }
+
+// ------------------------------------------------- 备忘/笔记共享的文档级纯函数
+
+/** 标签输入框 → 标签数组（中英文逗号分隔，去空白与空项） */
+export function parseTagsInput(input: string): string[] {
+  return input
+    .split(/[,，]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** 预览源：标题以 H1 合成（仅渲染，从不入库；编辑区不出现 H1） */
+export function composePreview(title: string, body: string): string {
+  return `# ${title.trim() || "未命名"}\n\n${body}`;
+}
+
+/**
+ * 保存正文：统一由前端合成首行 H1，恒命中服务端 _compose_body 的"首行匹配"分支，
+ * GET→PUT 幂等、杜绝双 H1；正文为空时只保留 H1 行。
+ */
+export function composeDocBody(title: string, body: string): string {
+  const trimmed = body.trim();
+  return trimmed ? `# ${title}\n\n${trimmed}` : `# ${title}\n`;
+}

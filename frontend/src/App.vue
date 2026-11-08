@@ -6,6 +6,7 @@ import { useUiStore } from "./stores/ui";
 import { useTodosStore } from "./stores/todos";
 import { useEventsStore } from "./stores/events";
 import { useMemosStore } from "./stores/memos";
+import { useNotesStore } from "./stores/notes";
 import { useTimelineStore } from "./stores/timeline";
 import { todayCN } from "./lib/format";
 
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/calendar", ico: "📅", label: "日历" },
   { to: "/timeline", ico: "🕘", label: "时间线" },
   { to: "/memos", ico: "📝", label: "备忘" },
+  { to: "/notes", ico: "📓", label: "笔记" },
 ];
 
 const title = computed(() => (route.meta?.title as string) ?? "");
@@ -29,6 +31,7 @@ function reloadAll() {
   useTodosStore().load(ui.user);
   useEventsStore().load(ui.user);
   useMemosStore().load(ui.user);
+  useNotesStore().load(ui.user);
   useTimelineStore().load(ui.user);
 }
 

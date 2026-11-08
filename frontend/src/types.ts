@@ -79,6 +79,53 @@ export interface AssetUpload {
   content_type: string;
 }
 
+// ---------------------------------------------------------------- 笔记（#4/#5，ADR-0001/0002）
+
+/** 文件夹即真实子目录：path 为相对 notes/ 的斜杠路径，name 为末段名 */
+export interface NoteFolder {
+  path: string;
+  name: string;
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  date: string | null;
+  tags: string[];
+  related: string[];
+  created: string | null;
+  excerpt: string;
+  filename: string;
+  /** 所属文件夹相对路径；根层散放为空串（不写进 md，仅由物理路径表达） */
+  folder: string;
+  content?: string; // 仅详情/写响应返回
+}
+
+/** GET /api/notes 的扁平响应（前端按 folder 字段组树） */
+export interface NotesResp {
+  count: number;
+  folders: NoteFolder[];
+  items: Note[];
+}
+
+/** POST /api/notes：folder 可选，须指向已存在文件夹（默认根层） */
+export interface NoteCreate {
+  title: string;
+  content?: string;
+  tags?: string[];
+  related?: string[];
+  folder?: string;
+}
+
+/** PUT /api/notes/{id}：folder 显式传入才触发移动（不传留在原目录） */
+export interface NoteUpdate {
+  title: string;
+  content?: string;
+  tags?: string[];
+  related?: string[];
+  folder?: string;
+}
+
 export interface TimelineResp {
   exists: boolean;
   message?: string;
