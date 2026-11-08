@@ -1,6 +1,9 @@
 # ── 真实用户数据（不入库） ──
 data/users/me/
 
+# ── T2 一次性迁移的仓外 zip 备份（默认在仓库外，此条兜底） ──
+.migration-backups/
+
 # ── Python ──
 __pycache__/
 *.pyc

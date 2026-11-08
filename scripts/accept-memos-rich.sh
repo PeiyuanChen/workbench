@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # ============================================================
 # 备忘富文本验收脚本（列表/表格/粗斜体/标题字号/图片）
-# T1（#2）改名 notes → memos：端点 /api/memos(/assets)、沙箱目录 memos/。
-# 注意：me/ 真实数据在 T1 不动（磁盘上仍是 notes/），故下方 me/ 只读冒烟
-#       保持 data/users/me/notes 路径；T2 真实迁移完成后改为 memos/。
+# T1（#2）改名 notes → memos：端点 /api/memos(/assets)、沙箱目录 memos/；
+# T2（#3）真实 me/ 已由 scripts/migrate-notes-to-memos.py 迁到 memos/。
 #
 # 纪律与 scripts/accept-m2.sh 完全一致（勿改回，坑均实测）：
 #   - 沙箱化：mktemp 临时目录 + WORKBENCH_DATA，基底从 data/users/example
@@ -91,15 +90,15 @@ start_server
 echo "[SERVER] uvicorn pid=$UVICORN_PID port=$PORT"
 
 # ------------------------------------------------------------ me/ 只读冒烟
-# T1 不碰 me/：真实目录 T1 期间仍为 notes/（T2 才迁移为 memos/），这里只读冒烟
+# me/ 只读冒烟：T2 迁移后真实备忘在 memos/（冷备份 .backup/ 不参与）
 "$PY" -c "
 from pathlib import Path
 import frontmatter
-me = Path(r'$REPO_ROOT_WIN/data/users/me/notes')
+me = Path(r'$REPO_ROOT_WIN/data/users/me/memos')
 n = 0
 for p in me.glob('*.md'):
     frontmatter.load(p); n += 1
-print('[me 冒烟 OK] data/users/me/notes 下 %d 篇备忘均可 frontmatter 解析（只读未改；T2 迁移目录名）' % n)"
+print('[me 冒烟 OK] data/users/me/memos 下 %d 篇备忘均可 frontmatter 解析（只读未改）' % n)"
 
 # ------------------------------------------------------------ 1) 图片上传
 "$PY" -c "

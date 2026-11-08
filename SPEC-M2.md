@@ -84,12 +84,12 @@ dtend 语义：API 的 `dtend` **恒为 RFC 5545 排他语义**（GET/POST 对�
 物理目录 `data/users/<user>/memos/`，图片资产 `memos/assets/`，frontmatter id 前缀 `memo-`。
 旧 `/api/notes` 路径不保留兼容别名，任何方法请求一律 404（测试 `test_old_notes_routes_return_404` 锁死）。
 
-> **T1/T2 迁移状态（过渡期须知，跟踪票 #3）**：T1（#2）只改代码链路与 git 跟踪的
-> example/data-samples，**真实 `data/users/me/` 在 T1 中零改动**，磁盘上仍是 `notes/` 布局、
-> id 仍是 `note-` 前缀。因此 T1 合并后、T2 一次性迁移执行前，默认 me/ 用户的备忘视图为空
-> （应用只读 `memos/`，旧 `notes/` 不被识别）——这是已知且被票文接受的临时状态，不是缺陷；
-> example 用户不受影响。T2（#3）交付独立可审计的一次性迁移 CLI：仓外 zip 备份 → 目录改名 →
-> 活跃 md 的 id 前缀重写（`.backup/` 冷快照不动）→ 内置校验，对 me/ 只执行一次。
+> **T1/T2 迁移状态（跟踪票 #2/#3，均已完成）**：T1 改代码链路与 git 跟踪的
+> example/data-samples；T2 由 `scripts/migrate-notes-to-memos.py` 对真实
+> `data/users/me/` 执行一次性迁移（2026-11-08）：仓外 zip 备份 → `notes/` 改名 `memos/` →
+> 16 篇活跃 md 的 id 前缀 `note-`→`memo-`（`.backup/` 冷快照不重写）→ 内置校验全过。
+> 该脚本带预检（防重复执行）与失败自动回滚，配套测试见
+> `backend/tests/test_migrate_notes_to_memos.py`；zip 备份位于仓库外 `.migration-backups/`。
 
 | 方法路径 | 语义 |
 |---|---|
