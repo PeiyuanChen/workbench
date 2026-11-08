@@ -1,4 +1,7 @@
-"""备忘图片资产存取（data/users/{user}/notes/assets/）。
+"""Markdown 集合图片资产存取（data/users/{user}/<集合目录>/assets/）。
+
+T1 起按 MarkdownCollection 配置决定落盘位置（备忘 memos/assets，
+未来笔记 notes/assets），与 md_store 同一套参数化内核。
 
 设计约束（数据主权 + 安全）：
 - 图片是用户数据：落盘为开放格式（png/jpeg/gif/webp），正文以标准 Markdown
@@ -16,10 +19,9 @@ from pathlib import Path
 
 from app.core.errors import NotFound, ValidationFailed
 from app.core.uids import hex_suffix, local_now
-from app.datastore import md_store
 from app.datastore.atomic import atomic_write_bytes
+from app.datastore.md_store import MarkdownCollection, collection_dir
 
-ASSETS_DIRNAME = "assets"
 MAX_ASSET_BYTES = 5 * 1024 * 1024  # 5 MiB（路由层在写盘前按此限流）
 
 # 扩展名 → Content-Type（jpeg 族归一）
@@ -35,8 +37,8 @@ MEDIA_TYPES: dict[str, str] = {
 SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 
 
-def _assets_dir(base_dir: Path) -> Path:
-    return Path(base_dir) / md_store.NOTES_DIR / ASSETS_DIRNAME
+def _assets_dir(base_dir: Path, collection: MarkdownCollection) -> Path:
+    return collection_dir(base_dir, collection) / collection.assets_dirname
 
 
 def client_ext(filename: str | None) -> str:
@@ -86,24 +88,25 @@ def new_asset_name(assets_dir: Path, ext: str, now=None) -> str:
     raise ValidationFailed("图片命名冲突，请重试")  # 极小概率：16 次全撞
 
 
-def save_asset(base_dir: Path, data: bytes, ext: str) -> dict:
+def save_asset(base_dir: Path, collection: MarkdownCollection, data: bytes, ext: str) -> dict:
     """原子写入一张图片，返回 {name, path, size, content_type}。
 
     调用方须先完成大小闸门、扩展名白名单与 magic 嗅探。
+    path 相对集合目录（正文以 ![](assets/<name>) 引用），与集合名解耦。
     """
-    assets = _assets_dir(base_dir)
+    assets = _assets_dir(base_dir, collection)
     assets.mkdir(parents=True, exist_ok=True)
     name = new_asset_name(assets, ext)
     atomic_write_bytes(assets / name, data)
     return {
         "name": name,
-        "path": f"{ASSETS_DIRNAME}/{name}",
+        "path": f"{collection.assets_dirname}/{name}",
         "size": len(data),
         "content_type": MEDIA_TYPES[ext],
     }
 
 
-def resolve_asset(base_dir: Path, name: str) -> tuple[Path, str]:
+def resolve_asset(base_dir: Path, collection: MarkdownCollection, name: str) -> tuple[Path, str]:
     """GET 取图：校验名字 → 后缀 → 目录边界 → 文件存在；返回 (路径, media_type)。"""
     if not SAFE_NAME_RE.match(name):
         # 路径穿越/非法字符一律按 422（不暴露文件是否存在）
@@ -112,7 +115,7 @@ def resolve_asset(base_dir: Path, name: str) -> tuple[Path, str]:
     media = MEDIA_TYPES.get(ext)
     if media is None:
         raise NotFound("图片不存在")
-    assets = _assets_dir(base_dir).resolve()
+    assets = _assets_dir(base_dir, collection).resolve()
     target = (assets / name).resolve()
     if not target.is_relative_to(assets) or not target.is_file():
         raise NotFound("图片不存在")

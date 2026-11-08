@@ -14,7 +14,7 @@ from app.api import (
     routes_assets,
     routes_events,
     routes_health,
-    routes_notes,
+    routes_memos,
     routes_timeline,
     routes_todos,
 )
@@ -77,6 +77,6 @@ async def _request_validation_handler(request: Request, exc: RequestValidationEr
 app.include_router(routes_health.router)
 app.include_router(routes_todos.router)
 app.include_router(routes_events.router)
-app.include_router(routes_notes.router)
+app.include_router(routes_memos.router)
 app.include_router(routes_assets.router)
 app.include_router(routes_timeline.router)

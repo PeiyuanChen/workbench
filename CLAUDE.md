@@ -38,7 +38,8 @@ Web 先行（PWA），未来 iOS/Android 复用同一后端。
 
 ## API（M2 可写，M3 加生成；M1 只读 GET 已完成）
 
-M2 写：`POST/PATCH/DELETE /api/todos`（含 parent、DUE、DTSTART+DURATION、象限标签）、`POST/PATCH/DELETE /api/events`、`PUT/POST /api/notes`。
+M2 写：`POST/PATCH/DELETE /api/todos`（含 parent、DUE、DTSTART+DURATION、象限标签）、`POST/PATCH/DELETE /api/events`、`PUT/POST /api/memos`（备忘；物理目录 `memos/`、id 前缀 `memo-`、资产端点 `/api/memos/assets`，旧 `/api/notes` 已下线返回 404）。
+> 迁移状态（#2/T1 → #3/T2）：代码链路与 example/data-samples 已切到 memos；真实 `data/users/me/` 仍为 `notes/` 布局，T1 不动它，由 #3 的一次性迁移脚本收口。过渡期 me/ 备忘视图为空属预期，勿为此回退链路命名。
 M3：`POST /api/timeline/generate?range=2026-03`（LLM 基于该范围待办+事件+备忘，用固定模板 prompt 生成，**落盘为 timeline md**，可重新生成、可手改）。
 
 ## 界面基准

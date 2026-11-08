@@ -1,9 +1,10 @@
-"""标识符与标题清洗（SPEC-M2 决策 #2 / 决策 D）。
+"""标识符与标题清洗（SPEC-M2 决策 #2 / 决策 D；T1 参数化）。
 
 - 待办/事件 UID：`YYYYMMDDTHHMMSS-<4位hex>@workbench.local`
   （时间用 Asia/Shanghai 本地钟面，4 位 hex 用 secrets.token_hex(2)）。
-- 备忘 id：`YYYYMMDD-note-<标题清洗>`（保留中文；冲突短后缀由调用方追加）。
-- slugify_title：备忘文件名与 id 共用的标题清洗规则。
+- Markdown 文档 id：`YYYYMMDD-<前缀>-<标题清洗>`（保留中文；冲突短后缀由调用方追加）；
+  前缀由集合配置注入（备忘 = memo，未来笔记 = note）。
+- slugify_title：Markdown 文件名与 id 共用的标题清洗规则。
 """
 
 from __future__ import annotations
@@ -55,13 +56,14 @@ def slugify_title(title: str) -> str:
     return s or UNTITLED
 
 
-def new_note_id(title: str, now: datetime | None = None) -> str:
-    """备忘 id：YYYYMMDD-note-<标题清洗>（保留中文，决策 D）。
+def new_doc_id(id_prefix: str, title: str, now: datetime | None = None) -> str:
+    """Markdown 文档 id：YYYYMMDD-<前缀>-<标题清洗>（保留中文，决策 D）。
 
+    id_prefix 由 MarkdownCollection 注入（备忘 "memo" / 未来笔记 "note"）；
     id 冲突时由调用方（service 层）追加 -<4hex> 短后缀重试。
     """
     now = now or local_now()
-    return f"{now.strftime('%Y%m%d')}-note-{slugify_title(title)}"
+    return f"{now.strftime('%Y%m%d')}-{id_prefix}-{slugify_title(title)}"
 
 
 def hex_suffix() -> str:

@@ -9,7 +9,7 @@
 | 待办（todo） | iCalendar `VTODO`（CalDAV 同步） | `calendar.ics` |
 | 日历（事件） | iCalendar `VEVENT`（.ics） | `calendar.ics` |
 | 四象限 | **不是独立数据**——就是待办上的两个标签 `X-IMPORTANT` / `X-URGENT` | 由 `calendar.ics` 生成 |
-| 备忘 note | **Markdown** + YAML frontmatter | `notes/*.md` |
+| 备忘 memo | **Markdown** + YAML frontmatter | `memos/*.md` |
 | 时间线 timeline | **Markdown**（按月一文件） | `timeline/YYYY/MM.md` |
 
 ## 目录结构
@@ -17,7 +17,7 @@
 ```
 data-samples/
 ├─ calendar.ics                  # 待办 + 日历（CalDAV 标准，任何日历软件能打开）
-├─ notes/                        # 备忘：一篇一个 .md
+├─ memos/                        # 备忘：一篇一个 .md（id 前缀 memo-）
 │  └─ 2026-09-03-工作台设计决策.md
 └─ timeline/                     # 时间线：按月回溯
    └─ 2026/
@@ -36,7 +36,7 @@ data-samples/
 2. **.ics 是纯文本**，记事本就能开；Google/Apple/Outlook/Nextcloud/Vikunja 全都能导入。
 3. **Markdown 是纯文本**，任何编辑器、任何年代都能读，Git 可版本化、可 diff。
 4. 自定义字段以 `X-` 开头（`X-IMPORTANT`）是 iCalendar 标准允许的扩展，别的工具读不懂会忽略，不会报错。
-5. note 和 timeline 里用 `uid:xxx` / `[[2026/03]]` 做相互链接，前端可渲染成跳转链接，但去掉前端它们也只是普通文字。
+5. memo 和 timeline 里用 `uid:xxx` / `[[2026/03]]` 做相互链接，前端可渲染成跳转链接，但去掉前端它们也只是普通文字。
 
 ## 待办不需要时间（RFC 5545 官方支持）
 

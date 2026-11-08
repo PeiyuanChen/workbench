@@ -16,7 +16,7 @@ const props = withDefaults(
     /** 相对 assets/ 图片的 HTTP 前缀；null = 不改写（时间线 M3 前无图片） */
     imageBase?: string | null;
   }>(),
-  { user: "", imageBase: "/api/notes/assets" },
+  { user: "", imageBase: "/api/memos/assets" },
 );
 
 const md = new MarkdownIt({ html: false, breaks: false, linkify: true });
@@ -25,7 +25,7 @@ const PROTO_RE = /^[a-z][a-z0-9+.-]*:/i;
 
 /**
  * 把正文中的相对 assets/ 图片改写到后端图片接口。
- * 必须改写：hash 路由页面 URL 是 /#/notes，相对 "assets/x.png" 会被浏览器
+ * 必须改写：hash 路由页面 URL 是 /#/memos，相对 "assets/x.png" 会被浏览器
  * 解析成 /assets/x.png（不在 /api 代理下，404）。
  * 返回 null 表示不动（外链/绝对路径/异常路径）。
  */

@@ -76,13 +76,14 @@ def test_events_bad_month(client: TestClient) -> None:
     assert client.get("/api/events", params={"user": "tester"}).status_code == 422
 
 
-def test_notes(client: TestClient) -> None:
-    body = _get(client, "/api/notes").json()
+def test_memos(client: TestClient) -> None:
+    body = _get(client, "/api/memos").json()
     assert body["count"] == 1
-    note_id = body["items"][0]["id"]
-    detail = _get(client, f"/api/notes/{note_id}").json()
+    memo_id = body["items"][0]["id"]
+    assert memo_id == "20260903-memo-workbench-arch"
+    detail = _get(client, f"/api/memos/{memo_id}").json()
     assert "content" in detail and "软件只是一层皮" in detail["content"]
-    assert _get(client, "/api/notes/no-such-note").status_code == 404
+    assert _get(client, "/api/memos/no-such-memo").status_code == 404
 
 
 def test_timeline(client: TestClient) -> None:
@@ -97,5 +98,5 @@ def test_empty_user_dir_returns_empty_not_500(client: TestClient) -> None:
     """me/幽灵用户目录为空：各端点返回空数据而非报错（数据主权容错）。"""
     assert client.get("/api/todos", params={"user": "ghost"}).json() == {"count": 0, "items": []}
     assert client.get("/api/events", params={"month": "2026-09", "user": "ghost"}).json()["items"] == []
-    assert client.get("/api/notes", params={"user": "ghost"}).json()["count"] == 0
+    assert client.get("/api/memos", params={"user": "ghost"}).json()["count"] == 0
     assert client.get("/api/timeline/2026/3", params={"user": "ghost"}).json()["exists"] is False

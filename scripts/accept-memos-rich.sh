@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================
 # 备忘富文本验收脚本（列表/表格/粗斜体/标题字号/图片）
+# T1（#2）改名 notes → memos：端点 /api/memos(/assets)、沙箱目录 memos/。
+# 注意：me/ 真实数据在 T1 不动（磁盘上仍是 notes/），故下方 me/ 只读冒烟
+#       保持 data/users/me/notes 路径；T2 真实迁移完成后改为 memos/。
 #
 # 纪律与 scripts/accept-m2.sh 完全一致（勿改回，坑均实测）：
 #   - 沙箱化：mktemp 临时目录 + WORKBENCH_DATA，基底从 data/users/example
@@ -88,6 +91,7 @@ start_server
 echo "[SERVER] uvicorn pid=$UVICORN_PID port=$PORT"
 
 # ------------------------------------------------------------ me/ 只读冒烟
+# T1 不碰 me/：真实目录 T1 期间仍为 notes/（T2 才迁移为 memos/），这里只读冒烟
 "$PY" -c "
 from pathlib import Path
 import frontmatter
@@ -95,7 +99,7 @@ me = Path(r'$REPO_ROOT_WIN/data/users/me/notes')
 n = 0
 for p in me.glob('*.md'):
     frontmatter.load(p); n += 1
-print('[me 冒烟 OK] data/users/me/notes 下 %d 篇备忘均可 frontmatter 解析（只读未改）' % n)"
+print('[me 冒烟 OK] data/users/me/notes 下 %d 篇备忘均可 frontmatter 解析（只读未改；T2 迁移目录名）' % n)"
 
 # ------------------------------------------------------------ 1) 图片上传
 "$PY" -c "
@@ -105,7 +109,7 @@ png = base64.b64decode(
     '+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==')
 pathlib.Path(r'$SANDBOX_ROOT_WIN/tiny.png').write_bytes(png)"
 
-ASSET_NAME=$(curlx -X POST "$BASE/notes/assets?user=$U" \
+ASSET_NAME=$(curlx -X POST "$BASE/memos/assets?user=$U" \
   -F "file=@$SANDBOX_ROOT_WIN/tiny.png;type=image/png" | "$PY" -c "
 import sys, json, re
 r = json.load(sys.stdin)
@@ -121,13 +125,13 @@ echo "[1a OK] 图片上传 name=$ASSET_NAME"
 # 落盘字节与源一致
 "$PY" -c "
 import pathlib, os
-p = pathlib.Path(r'$SANDBOX_ROOT_WIN/users/$U/notes/assets') / os.environ['ASSET_NAME']
+p = pathlib.Path(r'$SANDBOX_ROOT_WIN/users/$U/memos/assets') / os.environ['ASSET_NAME']
 assert p.is_file() and p.read_bytes() == pathlib.Path(r'$SANDBOX_ROOT_WIN/tiny.png').read_bytes()
-print('[1b OK] 图片落盘 notes/assets/，字节与上传一致')"
+print('[1b OK] 图片落盘 memos/assets/，字节与上传一致')"
 
 # GET 回读 200 + content-type + 字节一致
 CT=$(curlx -o "$SANDBOX_ROOT_WIN/back.png" -w '%{http_code} %{content_type}' \
-  "$BASE/notes/assets/$ASSET_NAME?user=$U")
+  "$BASE/memos/assets/$ASSET_NAME?user=$U")
 [ "${CT%% *}" = "200" ] || { echo "[FATAL] 取图非 200: $CT"; exit 1; }
 [ "${CT#* }" = "image/png" ] || { echo "[FATAL] content-type 异常: $CT"; exit 1; }
 "$PY" -c "
@@ -138,30 +142,31 @@ assert a == b, '取图字节不一致'
 print('[1c OK] GET 取图 200 image/png，字节一致')"
 
 # 非法类型 / 伪装内容 → 422
-SVG_CODE=$(curlx -o /dev/null -w '%{http_code}' -X POST "$BASE/notes/assets?user=$U" \
+SVG_CODE=$(curlx -o /dev/null -w '%{http_code}' -X POST "$BASE/memos/assets?user=$U" \
   -F "file=@$SANDBOX_ROOT_WIN/tiny.png;filename=x.svg;type=image/svg+xml")
 [ "$SVG_CODE" = "422" ] || { echo "[FATAL] svg 应 422，实际 $SVG_CODE"; exit 1; }
 "$PY" -c "import pathlib; pathlib.Path(r'$SANDBOX_ROOT_WIN/fake.png').write_bytes(b'not an image')"
-FAKE_CODE=$(curlx -o /dev/null -w '%{http_code}' -X POST "$BASE/notes/assets?user=$U" \
+FAKE_CODE=$(curlx -o /dev/null -w '%{http_code}' -X POST "$BASE/memos/assets?user=$U" \
   -F "file=@$SANDBOX_ROOT_WIN/fake.png;type=image/png")
 [ "$FAKE_CODE" = "422" ] || { echo "[FATAL] 伪装图片应 422，实际 $FAKE_CODE"; exit 1; }
 echo "[1d OK] svg 与伪装内容均 422"
 
 # ------------------------------------------------------------ 2) 富文本正文往返
-NOTE=$(curlx -X POST "$BASE/notes?user=$U" -H 'Content-Type: application/json' -d @- <<JSON | "$PY" -c "
+MEMO=$(curlx -X POST "$BASE/memos?user=$U" -H 'Content-Type: application/json' -d @- <<JSON | "$PY" -c "
 import sys, json
 from urllib.parse import quote
-n = json.load(sys.stdin)['data']
-assert n['content'].startswith('# 富文本验收'), n
-print(n['id'] + ' ' + quote(n['id'], safe=''))" | tr -d '\r'
+m = json.load(sys.stdin)['data']
+assert m['content'].startswith('# 富文本验收'), m
+assert m['id'].split('-')[1] == 'memo', 'T1：id 前缀应为 memo'
+print(m['id'] + ' ' + quote(m['id'], safe=''))" | tr -d '\r'
 {"title":"富文本验收","content":"# 富文本验收\n\n**粗** *斜*\n\n## 小节\n\n### 中标题\n\n#### 小标题\n\n- 无序一\n- 无序二\n\n1. 有序一\n2. 有序二\n\n| 列1 | 列2 |\n| --- | --- |\n| 1 | 2 |\n\n![](assets/$ASSET_NAME)\n","tags":["验收"]}
 JSON
 )
-export NOTE_ID=${NOTE% *}; export NOTE_ENC=${NOTE#* }
-echo "[2a OK] 建富文本笔记 id=$NOTE_ID"
+export MEMO_ID=${MEMO% *}; export MEMO_ENC=${MEMO#* }
+echo "[2a OK] 建富文本备忘 id=$MEMO_ID"
 
 # GET 回来逐字保留（strip 后比较——读侧既有行为）
-curlx "$BASE/notes/$NOTE_ENC?user=$U" | "$PY" -c "
+curlx "$BASE/memos/$MEMO_ENC?user=$U" | "$PY" -c "
 import sys, json, os
 n = json.load(sys.stdin)
 c = n['content']
@@ -174,15 +179,15 @@ print('[2b OK] GET 正文逐字保留粗/斜/H2-4/列表/表格/图片语法，H
 
 # GET→PUT 幂等：原样回传不产生双 H1（python 组 payload 落文件，curl -d @ 发送，
 # 中文走 stdin/文件字节，避免命令行 GBK 转码）
-curlx "$BASE/notes/$NOTE_ENC?user=$U" > "$SANDBOX_ROOT/note.json"
+curlx "$BASE/memos/$MEMO_ENC?user=$U" > "$SANDBOX_ROOT/memo.json"
 "$PY" -c "
 import json, pathlib
-n = json.loads(pathlib.Path(r'$SANDBOX_ROOT_WIN/note.json').read_text(encoding='utf-8'))
-payload = {'title': n['title'], 'content': n['content'],
-           'tags': n['tags'], 'related': n['related']}
+m = json.loads(pathlib.Path(r'$SANDBOX_ROOT_WIN/memo.json').read_text(encoding='utf-8'))
+payload = {'title': m['title'], 'content': m['content'],
+           'tags': m['tags'], 'related': m['related']}
 pathlib.Path(r'$SANDBOX_ROOT_WIN/put.json').write_text(
     json.dumps(payload, ensure_ascii=False), encoding='utf-8')"
-curlx -X PUT "$BASE/notes/$NOTE_ENC?user=$U" -H 'Content-Type: application/json' \
+curlx -X PUT "$BASE/memos/$MEMO_ENC?user=$U" -H 'Content-Type: application/json' \
   -d @"$SANDBOX_ROOT_WIN/put.json" | "$PY" -c "
 import sys, json
 c = json.load(sys.stdin)['data']['content']
@@ -192,8 +197,8 @@ print('[2c OK] GET→PUT 幂等，仍只有一个 H1')"
 # ------------------------------------------------------------ 3) 数据主权：磁盘 .md 记事本可读
 "$PY" -c "
 import pathlib, os, frontmatter
-notes = pathlib.Path(r'$SANDBOX_ROOT_WIN/users/$U/notes')
-md = next(p for p in notes.glob('*.md') if '富文本' in p.name)
+memos = pathlib.Path(r'$SANDBOX_ROOT_WIN/users/$U/memos')
+md = next(p for p in memos.glob('*.md') if '富文本' in p.name)
 raw = md.read_text(encoding='utf-8')
 post = frontmatter.load(md)
 assert set(('id','tags','related')) <= set(post.keys()), 'frontmatter 契约键缺失'
@@ -201,10 +206,10 @@ assert '| 列1 | 列2 |' in raw and '![](assets/' + os.environ['ASSET_NAME'] + '
 print('[3 OK] 磁盘 .md 为纯文本标准 Markdown（frontmatter 契约不变，记事本/Obsidian 可开）:', md.name)"
 
 # ------------------------------------------------------------ 4) assets/ 不进列表
-curlx "$BASE/notes?user=$U" | "$PY" -c "
+curlx "$BASE/memos?user=$U" | "$PY" -c "
 import sys, json
 d = json.load(sys.stdin)
-assert all('assets' not in n['filename'] for n in d['items']), 'assets 混入备忘列表'
+assert all('assets' not in m['filename'] for m in d['items']), 'assets 混入备忘列表'
 print('[4 OK] assets/ 目录不进备忘列表 count=%d' % d['count'])"
 
 # ------------------------------------------------------------ 5) 前端构建 + 后端全量测试
@@ -218,4 +223,4 @@ fi
   && echo "[5b OK] pytest 全量绿"
 
 echo ""
-echo "[备忘富文本验收通过] 列表/表格/粗斜体/标题字号/图片全链路 OK；me/ 未被修改；沙箱将由 trap 清理"
+echo "[备忘富文本验收通过] /api/memos 列表/表格/粗斜体/标题字号/图片全链路 OK；me/ 未被修改；沙箱将由 trap 清理"

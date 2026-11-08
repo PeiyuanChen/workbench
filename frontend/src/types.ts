@@ -59,7 +59,7 @@ export interface EventDetail {
   alarms: { trigger: string; action: string; description: string }[];
 }
 
-export interface Note {
+export interface Memo {
   id: string;
   title: string;
   date: string | null;
@@ -71,7 +71,7 @@ export interface Note {
   content?: string; // 仅详情/写响应返回
 }
 
-/** 图片上传响应（POST /api/notes/assets 的 data） */
+/** 图片上传响应（POST /api/memos/assets 的 data） */
 export interface AssetUpload {
   name: string;
   path: string; // 形如 assets/20261030-…png
@@ -119,16 +119,16 @@ export interface EventCreate {
 
 export type EventPatch = Partial<Omit<EventCreate, "dtstart">> & { dtstart?: string | null };
 
-/** POST /api/notes（id/文件名服务端生成，SPEC-M2 §2.3） */
-export interface NoteCreate {
+/** POST /api/memos（id/文件名服务端生成，SPEC-M2 §2.3） */
+export interface MemoCreate {
   title: string;
   content?: string;
   tags?: string[];
   related?: string[];
 }
 
-/** PUT /api/notes/{id}：全文更新（tags/related 未传即重置为空） */
-export interface NoteUpdate {
+/** PUT /api/memos/{id}：全文更新（tags/related 未传即重置为空） */
+export interface MemoUpdate {
   title: string;
   content?: string;
   tags?: string[];

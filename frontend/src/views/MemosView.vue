@@ -2,8 +2,9 @@
 // 备忘视图：列表 ↔ 详情编辑（同视图切换，沿用 M1 范式）。
 // M2：详情可编辑（标题/标签/正文 textarea），保存 = PUT 全文更新；
 // 不引入 markdown 渲染库（数据即纯文本，正文以 "# 标题" H1 开头由服务端维护）。
+// T1：链路命名 notes → memos（UI 中文文案仍为「备忘」）。
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useNotesStore } from "../stores/notes";
+import { useMemosStore } from "../stores/memos";
 import { useUiStore } from "../stores/ui";
 import MarkdownView from "../components/MarkdownView.vue";
 import {
@@ -16,7 +17,7 @@ import {
   type PrefixKind,
 } from "../lib/mdedit";
 
-const notes = useNotesStore();
+const memos = useMemosStore();
 const ui = useUiStore();
 
 // 编辑表单态：从 current 复制，保存时整体提交（PUT 全文更新语义）
@@ -41,21 +42,21 @@ const previewSource = computed(() => {
 });
 
 onMounted(() => {
-  if (!notes.items.length && !notes.loading) notes.load(ui.user);
+  if (!memos.items.length && !memos.loading) memos.load(ui.user);
 });
 watch(() => ui.user, () => {
-  notes.close();
-  notes.load(ui.user);
+  memos.close();
+  memos.load(ui.user);
 });
-// 打开/切换笔记时回填表单
+// 打开/切换备忘时回填表单
 watch(
-  () => notes.current,
-  (n) => {
-    if (n) {
-      editTitle.value = n.title;
-      editTags.value = n.tags.join(", ");
+  () => memos.current,
+  (m) => {
+    if (m) {
+      editTitle.value = m.title;
+      editTags.value = m.tags.join(", ");
       // 服务端把标题维护为正文首行 H1（三源一致）；编辑区剥掉它，由标题框承载
-      editContent.value = stripLeadH1(n.content ?? "");
+      editContent.value = stripLeadH1(m.content ?? "");
       saveError.value = "";
       confirmDelete.value = false;
       deleteError.value = "";
@@ -64,13 +65,13 @@ watch(
 );
 
 function open(id: string) {
-  notes.open(id, ui.user).catch(() => {
+  memos.open(id, ui.user).catch(() => {
     /* 详情加载失败保持列表 */
   });
 }
 
 async function save() {
-  if (!notes.current || saving.value) return;
+  if (!memos.current || saving.value) return;
   saving.value = true;
   saveError.value = "";
   try {
@@ -78,8 +79,8 @@ async function save() {
     // GET→PUT 幂等，杜绝双 H1（正文本身已剥离 H1）
     const body = editContent.value.trim();
     const content = body ? `# ${editTitle.value}\n\n${body}` : `# ${editTitle.value}\n`;
-    await notes.update(
-      notes.current.id,
+    await memos.update(
+      memos.current.id,
       {
         title: editTitle.value,
         content,
@@ -87,11 +88,11 @@ async function save() {
           .split(/[,，]/)
           .map((s) => s.trim())
           .filter(Boolean),
-        related: notes.current.related,
+        related: memos.current.related,
       },
       ui.user,
     );
-    notes.close();
+    memos.close();
   } catch (e) {
     saveError.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -99,9 +100,9 @@ async function save() {
   }
 }
 
-/** 物理删除（两段式确认；服务端删除前已备份到 notes/.backup/） */
+/** 物理删除（两段式确认；服务端删除前已备份到 memos/.backup/） */
 async function doDelete() {
-  if (!notes.current || saving.value) return;
+  if (!memos.current || saving.value) return;
   if (!confirmDelete.value) {
     confirmDelete.value = true;
     return;
@@ -109,7 +110,7 @@ async function doDelete() {
   saving.value = true;
   deleteError.value = "";
   try {
-    await notes.remove(notes.current.id, ui.user);
+    await memos.remove(memos.current.id, ui.user);
   } catch (e) {
     deleteError.value = e instanceof Error ? e.message : String(e);
     confirmDelete.value = false;
@@ -177,7 +178,7 @@ async function uploadAndInsert(file: File) {
   uploading.value = true;
   uploadError.value = "";
   try {
-    const asset = await notes.uploadAsset(file, ui.user);
+    const asset = await memos.uploadAsset(file, ui.user);
     const block = `\n![](assets/${asset.name})\n`;
     const alt = block.indexOf("[]") + 1; // 光标落在 ![ ] 的说明位
     applyEdit(insertBlock(currentEdit(), block, [alt, alt]));
@@ -209,11 +210,11 @@ function onDrop(e: DragEvent) {
 
 <template>
   <!-- 详情（可编辑） -->
-  <div v-if="notes.current" class="note-detail">
-    <button type="button" class="btn-ghost back" @click="notes.close()">‹ 返回备忘列表</button>
+  <div v-if="memos.current" class="note-detail">
+    <button type="button" class="btn-ghost back" @click="memos.close()">‹ 返回备忘列表</button>
     <input v-model="editTitle" class="note-title-input" type="text" maxlength="200" placeholder="标题" />
     <div class="meta" style="margin-top: 8px; font-size: 11px; color: var(--slate)">
-      {{ notes.current.date }} · {{ notes.current.filename }}
+      {{ memos.current.date }} · {{ memos.current.filename }}
       <span v-if="ui.user === 'example'" class="tag t-amber" style="margin-left: 6px">示例数据</span>
     </div>
     <div class="note-tags-row">
@@ -276,15 +277,15 @@ function onDrop(e: DragEvent) {
 
   <!-- 列表 -->
   <template v-else>
-    <div v-if="notes.error" class="empty">加载失败：{{ notes.error }}</div>
-    <div v-else-if="!notes.items.length" class="empty">暂无备忘（用上方快速记录框新建一篇）</div>
+    <div v-if="memos.error" class="empty">加载失败：{{ memos.error }}</div>
+    <div v-else-if="!memos.items.length" class="empty">暂无备忘（用上方快速记录框新建一篇）</div>
     <div v-else class="notes">
-      <div v-for="n in notes.items" :key="n.id" class="note" @click="open(n.id)">
-        <h4>{{ n.title }}</h4>
-        <p>{{ n.excerpt }}</p>
+      <div v-for="m in memos.items" :key="m.id" class="note" @click="open(m.id)">
+        <h4>{{ m.title }}</h4>
+        <p>{{ m.excerpt }}</p>
         <div class="meta">
-          {{ n.date }}
-          <template v-for="t in n.tags" :key="t"> · #{{ t }}</template>
+          {{ m.date }}
+          <template v-for="t in m.tags" :key="t"> · #{{ t }}</template>
         </div>
       </div>
     </div>

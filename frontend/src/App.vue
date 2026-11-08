@@ -5,7 +5,7 @@ import QuickAdd from "./components/QuickAdd.vue";
 import { useUiStore } from "./stores/ui";
 import { useTodosStore } from "./stores/todos";
 import { useEventsStore } from "./stores/events";
-import { useNotesStore } from "./stores/notes";
+import { useMemosStore } from "./stores/memos";
 import { useTimelineStore } from "./stores/timeline";
 import { todayCN } from "./lib/format";
 
@@ -17,18 +17,18 @@ const navItems = [
   { to: "/todos", ico: "✅", label: "待办" },
   { to: "/calendar", ico: "📅", label: "日历" },
   { to: "/timeline", ico: "🕘", label: "时间线" },
-  { to: "/notes", ico: "📝", label: "备忘" },
+  { to: "/memos", ico: "📝", label: "备忘" },
 ];
 
 const title = computed(() => (route.meta?.title as string) ?? "");
 const showQuickadd = computed(() => Boolean(route.meta?.quickadd));
-// 备忘视图记笔记，四象限/待办记待办（frontend/CLAUDE.md 界面基准）
-const quickaddMode = computed<"todo" | "note">(() => (route.name === "notes" ? "note" : "todo"));
+// 备忘视图记备忘，四象限/待办记待办（frontend/CLAUDE.md 界面基准）
+const quickaddMode = computed<"todo" | "memo">(() => (route.name === "memos" ? "memo" : "todo"));
 
 function reloadAll() {
   useTodosStore().load(ui.user);
   useEventsStore().load(ui.user);
-  useNotesStore().load(ui.user);
+  useMemosStore().load(ui.user);
   useTimelineStore().load(ui.user);
 }
 

@@ -1,14 +1,14 @@
-"""备忘写操作（SPEC-M2 §2.3 + 决策 D）。
+"""备忘写操作（SPEC-M2 §2.3 + 决策 D；T1 改名后落 memos/ 集合、id 前缀 memo-）。
 
 语义：
-- id = `YYYYMMDD-note-<标题清洗>`（保留中文，日期=创建日/上海钟面）；
+- id = `YYYYMMDD-memo-<标题清洗>`（保留中文，日期=创建日/上海钟面）；
   id 冲突追加 -<4hex> 短后缀。
 - 文件名 = `YYYY-MM-DD-<标题清洗>.md`；同名冲突追加短后缀（md_store 负责）。
-- 标题三源一致（frontmatter 首行 H1 承载标题 / 文件名承载清洗版 / _parse_note
+- 标题三源一致（frontmatter 首行 H1 承载标题 / 文件名承载清洗版 / _parse_doc
   优先取 H1）：新建正文以 "# {title}" 开头（合 data-samples 惯例）；PUT 改标题
   同步替换首行 H1 并重命名文件（保留原创建日期前缀，id/created 不变），防"标题弹回"。
 - PUT = 全文更新：tags/related 未传即重置为 []（与 SPEC "全文更新" 一致）。
-- 写前备份 notes/.backup/（滚动 10 份）+ 原子写 + 回读闸门，全部由 md_store 承担。
+- 写前备份 memos/.backup/（滚动 10 份）+ 原子写 + 回读闸门，全部由 md_store 承担。
 """
 
 from __future__ import annotations
@@ -19,8 +19,9 @@ from pathlib import Path
 import frontmatter
 
 from app.core.errors import ApiError, NotFound, ValidationFailed
-from app.core.uids import hex_suffix, local_now, new_note_id
+from app.core.uids import hex_suffix, local_now, new_doc_id
 from app.datastore import md_store
+from app.datastore.md_store import MEMOS
 
 # 标题长度上限（与待办 summary 同口径；文件名 slug 另有 60 字截断）
 TITLE_MAX = 200
@@ -62,74 +63,77 @@ def _date_from_filename(name: str) -> str | None:
     return m.group(1) if m else None
 
 
-def _load_note_or_500(base_dir: Path, note_id: str) -> dict:
-    note = md_store.get_note(base_dir, note_id)
-    if note is None:  # 理论不可达：刚写盘就读不到 = 严重错误
-        raise ApiError(f"备忘写后读取失败: {note_id}", 500)
-    return note
+def _load_memo_or_500(base_dir: Path, memo_id: str) -> dict:
+    memo = md_store.get_markdown(base_dir, MEMOS, memo_id)
+    if memo is None:  # 理论不可达：刚写盘就读不到 = 严重错误
+        raise ApiError(f"备忘写后读取失败: {memo_id}", 500)
+    return memo
 
 
-def create_note(base_dir: Path, payload: dict) -> dict:
-    """新建备忘（POST /api/notes）→ 完整 note（含 content）。
+def create_memo(base_dir: Path, payload: dict) -> dict:
+    """新建备忘（POST /api/memos）→ 完整 memo（含 content）。
 
     服务端生成 id 与文件名（SPEC-M2 §2.3）；created = 上海今天。
     """
     title = _clean_title(payload.get("title"))
     now = local_now()
     date_str = now.strftime("%Y-%m-%d")
-    # id 冲突（同日同题）追加短后缀；文件名冲突由 make_note_filename 独立处理
-    note_id = new_note_id(title, now)
-    existing = {n["id"] for n in md_store.list_notes(base_dir)}
-    while note_id in existing:
-        note_id = f"{new_note_id(title, now)}-{hex_suffix()}"
-    filename = md_store.make_note_filename(base_dir, date_str, title)
+    # id 冲突（同日同题）追加短后缀；文件名冲突由 make_markdown_filename 独立处理
+    memo_id = new_doc_id(MEMOS.id_prefix, title, now)
+    existing = {d["id"] for d in md_store.list_markdown(base_dir, MEMOS)}
+    while memo_id in existing:
+        memo_id = f"{new_doc_id(MEMOS.id_prefix, title, now)}-{hex_suffix()}"
+    filename = md_store.make_markdown_filename(base_dir, MEMOS, date_str, title)
     metadata = {
-        "id": note_id,
+        "id": memo_id,
         "created": date_str,
         "tags": [str(t) for t in (payload.get("tags") or [])],
         "related": [str(r) for r in (payload.get("related") or [])],
     }
-    md_store.write_note(base_dir, filename, metadata, _compose_body(title, payload.get("content") or ""))
-    return _load_note_or_500(base_dir, note_id)
+    md_store.write_markdown(
+        base_dir, MEMOS, filename, metadata,
+        _compose_body(title, payload.get("content") or ""),
+    )
+    return _load_memo_or_500(base_dir, memo_id)
 
 
-def update_note(base_dir: Path, note_id: str, payload: dict) -> dict:
-    """全文更新（PUT /api/notes/{id}）→ 完整 note（含 content）。
+def update_memo(base_dir: Path, memo_id: str, payload: dict) -> dict:
+    """全文更新（PUT /api/memos/{id}）→ 完整 memo（含 content）。
 
     标题变更 → 重命名文件（保留原创建日期前缀），id/created 不变（决策 D）。
     """
     title = _clean_title(payload.get("title"))
-    old_path = md_store.find_note_path(base_dir, note_id)
+    old_path = md_store.find_markdown_path(base_dir, MEMOS, memo_id)
     if old_path is None:
-        raise NotFound(f"备忘不存在: {note_id}")
+        raise NotFound(f"备忘不存在: {memo_id}")
     old_meta = dict(frontmatter.load(old_path).metadata)
     created = str(old_meta.get("created") or "") or _date_from_filename(old_path.name) \
         or local_now().strftime("%Y-%m-%d")
     date_prefix = _date_from_filename(old_path.name) or created[:10]
     metadata = {
-        "id": str(old_meta.get("id") or note_id),  # 旧 id 不变（SPEC-M2 §2.3）
+        "id": str(old_meta.get("id") or memo_id),  # 旧 id 不变（SPEC-M2 §2.3）
         "created": created,
         "tags": [str(t) for t in (payload.get("tags") or [])],
         "related": [str(r) for r in (payload.get("related") or [])],
     }
     # 目标文件名：优先原名（标题未变 → 原地覆盖）；被别的文件占用才走冲突后缀
-    notes_dir = Path(base_dir) / md_store.NOTES_DIR
+    memos_dir = md_store.collection_dir(base_dir, MEMOS)
     new_filename = f"{date_prefix}-{md_store.slugify_title(title)}.md"
-    occupant = notes_dir / new_filename
+    occupant = memos_dir / new_filename
     if occupant.exists() and occupant != old_path:
-        new_filename = md_store.make_note_filename(base_dir, date_prefix, title)
-    md_store.write_note(
-        base_dir, new_filename, metadata,
+        new_filename = md_store.make_markdown_filename(base_dir, MEMOS, date_prefix, title)
+    md_store.write_markdown(
+        base_dir, MEMOS, new_filename, metadata,
         _compose_body(title, payload.get("content") or ""),
         old_path=None if new_filename == old_path.name else old_path,
     )
-    return _load_note_or_500(base_dir, metadata["id"])
+    return _load_memo_or_500(base_dir, metadata["id"])
 
 
-def delete_note(base_dir: Path, note_id: str) -> dict:
-    """物理删除（DELETE /api/notes/{id}）→ {"id","filename"}；删除前备份仍在 .backup/。"""
+def delete_memo(base_dir: Path, memo_id: str) -> dict:
+    """物理删除（DELETE /api/memos/{id}）→ {"id","filename"}；删除前备份仍在 .backup/。"""
     try:
-        path = md_store.delete_note(base_dir, note_id)
+        path = md_store.delete_markdown(base_dir, MEMOS, memo_id)
     except FileNotFoundError as e:
         raise NotFound(str(e)) from e
-    return {"id": note_id, "filename": path.name}
+    return {"id": memo_id, "filename": path.name}

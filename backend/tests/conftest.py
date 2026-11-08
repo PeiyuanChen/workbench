@@ -25,10 +25,10 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """把 data-samples 的三类数据拷进 {tmp}/users/tester，环境变量指向它。"""
     monkeypatch.setenv("WORKBENCH_DATA", str(tmp_path))
     user_dir = tmp_path / "users" / "tester"
-    (user_dir / "notes").mkdir(parents=True)
+    (user_dir / "memos").mkdir(parents=True)
     shutil.copy(SAMPLES / "calendar.ics", user_dir / "calendar.ics")
-    for md in (SAMPLES / "notes").glob("*.md"):
-        shutil.copy(md, user_dir / "notes" / md.name)
+    for md in (SAMPLES / "memos").glob("*.md"):
+        shutil.copy(md, user_dir / "memos" / md.name)
     shutil.copytree(SAMPLES / "timeline", user_dir / "timeline")
     return TestClient(app)
 

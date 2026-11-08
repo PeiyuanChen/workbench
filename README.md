@@ -15,7 +15,7 @@
 | 数据 | 格式 | 位置 |
 | --- | --- | --- |
 | 待办 + 日历事件 | iCalendar `.ics`（RFC 5545） | `data/users/{用户}/calendar.ics` |
-| 备忘 | Markdown（YAML frontmatter） | `data/users/{用户}/notes/YYYY-MM-DD-标题.md` |
+| 备忘 | Markdown（YAML frontmatter，id 前缀 `memo-`） | `data/users/{用户}/memos/YYYY-MM-DD-标题.md` |
 | 时间线 | Markdown（YAML frontmatter） | `data/users/{用户}/timeline/YYYY/MM.md` |
 
 没有本应用，这些文件也能用记事本、Obsidian、Apple/Google 日历、任意 CalDAV 客户端打开。
@@ -99,7 +99,7 @@ npm run dev
 | `GET /api/todos/{uid}` | 单条待办 |
 | `GET /api/events?month=YYYY-MM&user=` | 日历聚合（事件 + 执行块 + 截止标记） |
 | `GET /api/timeline/{year}/{month}?user=` | 时间线（未生成返回 `exists:false`） |
-| `GET /api/notes?user=` / `GET /api/notes/{id}?user=` | 备忘列表 / 详情 |
+| `GET /api/memos?user=` / `GET /api/memos/{id}?user=` | 备忘列表 / 详情 |
 
 | 端点 | 说明 |
 | --- | --- |
@@ -113,9 +113,9 @@ npm run dev
 | `POST /api/events` | 新建事件 |
 | `PATCH /api/events/{uid}` | 更新事件 |
 | `DELETE /api/events/{uid}` | 删除事件 |
-| `POST /api/notes` | 新建备忘 |
-| `PUT /api/notes/{id}` | 全文更新备忘 |
-| `DELETE /api/notes/{id}` | 删除备忘 |
+| `POST /api/memos` | 新建备忘 |
+| `PUT /api/memos/{id}` | 全文更新备忘 |
+| `DELETE /api/memos/{id}` | 删除备忘 |
 
 `user` 参数缺省取 `WORKBENCH_USER`（默认 `me`）。示例：
 `http://127.0.0.1:8000/api/todos?user=example`
@@ -123,7 +123,7 @@ npm run dev
 ## 测试与校验
 
 ```bash
-# 后端单元/集成测试（148 项：读写往返、中文折行、象限归位、父子进度、跨月裁剪、API、原子写、状态机）
+# 后端单元/集成测试（182 项：读写往返、中文折行、象限归位、父子进度、跨月裁剪、API、原子写、状态机、集合内核隔离、旧路由 404）
 cd backend && uv run pytest        # 或 .venv 下：python -m pytest
 
 # 数据契约校验（字段合法性、UID 唯一、frontmatter 完整）

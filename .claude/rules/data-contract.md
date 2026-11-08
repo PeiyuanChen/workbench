@@ -24,8 +24,9 @@ paths: ["backend/**"]
 - 日历视图**只读聚合展示**：事件 + 待办执行块（DTSTART+DURATION）画色块 + DUE 画小旗；无时间待办不上日历。
 
 ## Markdown（备忘 / 时间线）
-- 备忘 `notes/YYYY-MM-DD-标题.md`：frontmatter 含 `id,tags,related`，正文 Markdown。
+- 备忘 `memos/YYYY-MM-DD-标题.md`：frontmatter 含 `id,tags,related`，id 前缀 `memo-`（如 `20260903-memo-workbench-arch`），正文 Markdown。
 - 时间线 `timeline/YYYY/MM.md`：同 Markdown 结构，正文是某月主线/决策/回顾。
+- 命名预留：`notes/` 目录与 `note-` 前缀归未来「笔记」模块（ADR 0001）；备忘与笔记共用参数化 Markdown 存储内核，差异仅在集合配置（目录名/id 前缀/资产基址）。
 
 ## 时区
 统一用 `TZID=Asia/Shanghai`；存储/传输注意 UTC 与本地时区转换。

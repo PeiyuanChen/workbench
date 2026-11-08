@@ -2,17 +2,17 @@
 // ＋快速记录框（SPEC-M2 决策 #5/#6；仅四象限/待办/备忘三视图显示，由路由 meta.quickadd 控制）
 // - todo 模式：输入框 + 重要/紧急两个 toggle（默认都 FALSE）+ 回车即创建未排期待办；
 //   不做文本符号解析（无 !/?/#tag 魔法语法），分类标签 M2 不在此输入。
-// - note 模式：输入标题回车 → 创建 md（服务端生成 id/文件名）→ 打开正文编辑。
+// - memo 模式：输入标题回车 → 创建 md（服务端生成 id/文件名）→ 打开正文编辑。
 // 失败行内显示后端中文 detail（不做乐观更新）。
 import { ref } from "vue";
-import { useNotesStore } from "../stores/notes";
+import { useMemosStore } from "../stores/memos";
 import { useTodosStore } from "../stores/todos";
 import { useUiStore } from "../stores/ui";
 
-const props = defineProps<{ mode: "todo" | "note" }>();
+const props = defineProps<{ mode: "todo" | "memo" }>();
 
 const todos = useTodosStore();
-const notes = useNotesStore();
+const memos = useMemosStore();
 const ui = useUiStore();
 
 const text = ref("");
@@ -37,7 +37,7 @@ async function submit() {
       urgent.value = false;
     } else {
       // create 内部 await load 重拉列表，停留在列表页（不跳详情）
-      await notes.create({ title: value }, ui.user);
+      await memos.create({ title: value }, ui.user);
       text.value = "";
     }
   } catch (e) {
@@ -57,7 +57,7 @@ async function submit() {
         type="text"
         maxlength="200"
         :placeholder="
-          mode === 'note'
+          mode === 'memo'
             ? '＋ 快速记一条备忘…（随手写想法/决策，回车新建一篇）'
             : '＋ 快速记录一件最近要做的事…（先不设时间也可以，回车进入待办）'
         "

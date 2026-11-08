@@ -77,8 +77,8 @@ class EventPatch(BaseModel):
     all_day: bool | None = None
 
 
-class NoteCreate(BaseModel):
-    """POST /api/notes 请求体（SPEC-M2 §2.3；id/文件名服务端生成）。"""
+class MemoCreate(BaseModel):
+    """POST /api/memos 请求体（SPEC-M2 §2.3；id/文件名服务端生成）。"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -88,8 +88,8 @@ class NoteCreate(BaseModel):
     related: list[str] = Field(default_factory=list)
 
 
-class NoteUpdate(BaseModel):
-    """PUT /api/notes/{id} 请求体：全文更新（标题变更时重命名文件，id 不变）。"""
+class MemoUpdate(BaseModel):
+    """PUT /api/memos/{id} 请求体：全文更新（标题变更时重命名文件，id 不变）。"""
 
     model_config = ConfigDict(extra="forbid")
 

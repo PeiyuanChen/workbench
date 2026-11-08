@@ -9,7 +9,7 @@ export const routes: RouteRecordRaw[] = [
   { path: "/todos", name: "todos", component: () => import("../views/TodoView.vue"), meta: { title: "待办", quickadd: true } },
   { path: "/calendar", name: "calendar", component: () => import("../views/CalendarView.vue"), meta: { title: "日历" } },
   { path: "/timeline", name: "timeline", component: () => import("../views/TimelineView.vue"), meta: { title: "时间线" } },
-  { path: "/notes", name: "notes", component: () => import("../views/NotesView.vue"), meta: { title: "备忘", quickadd: true } },
+  { path: "/memos", name: "memos", component: () => import("../views/MemosView.vue"), meta: { title: "备忘", quickadd: true } },
 ];
 
 const router = createRouter({

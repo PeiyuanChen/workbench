@@ -104,7 +104,7 @@ export WORKBENCH_DATA="$SANDBOX_ROOT_WIN"
 UVICORN_LOG="$SANDBOX_ROOT/uvicorn.log"   # 仅供 bash 重定向/tail（MSYS 工具），用 MSYS 形式
 echo "[SANDBOX] $SANDBOX_ROOT (WORKBENCH_DATA=$WORKBENCH_DATA)"
 
-# 复制 example 用户作为 m2accept 基底（含 calendar.ics/notes/timeline）
+# 复制 example 用户作为 m2accept 基底（含 calendar.ics/memos/timeline；T1 起备忘目录为 memos/）
 mkdir -p "$SANDBOX_ROOT/users"
 cp -r "$REPO_ROOT/data/users/example" "$SANDBOX_ROOT/users/$SANDBOX_USER"
 
@@ -305,49 +305,57 @@ echo "[5a OK] 沙箱 .backup 滚动备份 $N_BAK 份（1~10）"
 # ============================================================
 # 6) 备忘：POST → 列表可见 → PUT 改正文 → 单篇一致 → DELETE → 404
 # ============================================================
-NOTE=$(curlx -X POST "$BASE/notes?user=$SANDBOX_USER" -H 'Content-Type: application/json' -d @- <<'JSON' | "$PY" -c "
+# T1（#2）：备忘链路 notes → memos（端点 /api/memos、id 前缀 memo-、目录 memos/）
+MEMO=$(curlx -X POST "$BASE/memos?user=$SANDBOX_USER" -H 'Content-Type: application/json' -d @- <<'JSON' | "$PY" -c "
 import sys, json
 from urllib.parse import quote
-n = json.load(sys.stdin)['data']
-assert n['title'] == 'M2验收-临时笔记', n
-assert 'M2验收-临时笔记' in n['id'], n          # 决策 D：id 含中文标题
-assert n['filename'].endswith('.md'), n
-assert n['content'].startswith('# M2验收-临时笔记'), n   # 标题三源一致（H1）
-print(n['id'] + ' ' + quote(n['id'], safe=''))" | tr -d '\r'
-{"title":"M2验收-临时笔记","content":"正文一","tags":["验收"]}
+m = json.load(sys.stdin)['data']
+assert m['title'] == 'M2验收-临时备忘', m
+assert 'M2验收-临时备忘' in m['id'], m          # 决策 D：id 含中文标题
+assert m['id'].split('-')[1] == 'memo', m       # T1：id 前缀 memo-
+assert m['filename'].endswith('.md'), m
+assert m['content'].startswith('# M2验收-临时备忘'), m   # 标题三源一致（H1）
+print(m['id'] + ' ' + quote(m['id'], safe=''))" | tr -d '\r'
+{"title":"M2验收-临时备忘","content":"正文一","tags":["验收"]}
 JSON
 )
-export NOTE_ID=${NOTE% *}; export NOTE_ENC=${NOTE#* }
-echo "[6a OK] POST 笔记 id=$NOTE_ID"
+export MEMO_ID=${MEMO% *}; export MEMO_ENC=${MEMO#* }
+echo "[6a OK] POST 备忘 id=$MEMO_ID"
 
-curlx "$BASE/notes?user=$SANDBOX_USER" | "$PY" -c "
+curlx "$BASE/memos?user=$SANDBOX_USER" | "$PY" -c "
 import sys, json, os
 d = json.load(sys.stdin)
-assert any(n['id'] == os.environ['NOTE_ID'] for n in d['items']), '列表缺新笔记'
+assert any(m['id'] == os.environ['MEMO_ID'] for m in d['items']), '列表缺新备忘'
 print('[6b OK] 备忘列表可见 count=%d' % d['count'])"
 
-curlx -X PUT "$BASE/notes/$NOTE_ENC?user=$SANDBOX_USER" -H 'Content-Type: application/json' -d @- <<'JSON' | "$PY" -c "
+curlx -X PUT "$BASE/memos/$MEMO_ENC?user=$SANDBOX_USER" -H 'Content-Type: application/json' -d @- <<'JSON' | "$PY" -c "
 import sys, json
-n = json.load(sys.stdin)['data']
-assert '正文二-已修改' in n['content'], n
-assert n['id'] == __import__('os').environ['NOTE_ID'], 'id 不得变化'
+m = json.load(sys.stdin)['data']
+assert '正文二-已修改' in m['content'], m
+assert m['id'] == __import__('os').environ['MEMO_ID'], 'id 不得变化'
 print('[6c OK] PUT 全文更新')"
-{"title":"M2验收-临时笔记","content":"正文二-已修改","tags":["验收"],"related":[]}
+{"title":"M2验收-临时备忘","content":"正文二-已修改","tags":["验收"],"related":[]}
 JSON
 
-curlx "$BASE/notes/$NOTE_ENC?user=$SANDBOX_USER" | "$PY" -c "
+curlx "$BASE/memos/$MEMO_ENC?user=$SANDBOX_USER" | "$PY" -c "
 import sys, json
-n = json.load(sys.stdin)
-assert '正文二-已修改' in n['content'], n
+m = json.load(sys.stdin)
+assert '正文二-已修改' in m['content'], m
 print('[6d OK] GET 单篇内容一致')"
 
-curlx -X DELETE "$BASE/notes/$NOTE_ENC?user=$SANDBOX_USER" | "$PY" -c "
+curlx -X DELETE "$BASE/memos/$MEMO_ENC?user=$SANDBOX_USER" | "$PY" -c "
 import sys, json
 assert json.load(sys.stdin)['ok']
 print('[6e OK] DELETE 备忘')"
 
-[ "$(curlx -o /dev/null -w '%{http_code}' "$BASE/notes/$NOTE_ENC?user=$SANDBOX_USER")" = "404" ]
+[ "$(curlx -o /dev/null -w '%{http_code}' "$BASE/memos/$MEMO_ENC?user=$SANDBOX_USER")" = "404" ]
 echo "[6f OK] 删除后 404"
+
+# T1 旧路径下线闸门：/api/notes 任何请求一律 404（不保留兼容别名）
+[ "$(curlx -o /dev/null -w '%{http_code}' "$BASE/notes?user=$SANDBOX_USER")" = "404" ]
+[ "$(curlx -o /dev/null -w '%{http_code}' -X POST "$BASE/notes?user=$SANDBOX_USER" \
+    -H 'Content-Type: application/json' -d '{"title":"x"}')" = "404" ]
+echo "[6g OK] 旧 /api/notes 路径已下线（GET/POST 均 404）"
 
 # ============================================================
 # 7) 事件：POST 全天（dtend 排他）→ 当月聚合可见（含首尾不含排他日）→ DELETE → 消失
