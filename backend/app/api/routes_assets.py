@@ -5,41 +5,23 @@
 
 落盘在 data/users/{user}/memos/assets/，正文以 ![](assets/<name>) 引用。
 写响应沿用信封 {"ok":true,"data":{name,path,size,content_type}}。
+安全闸门在 app.api/uploads，与笔记资产路由共用同一份实现。
 """
 
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import FileResponse
 
+from app.api.uploads import read_validated_image
 from app.core.config import data_root
-from app.core.errors import ValidationFailed
 from app.datastore import asset_store
 from app.datastore.md_store import MEMOS
 
 router = APIRouter(prefix="/api/memos/assets", tags=["memos-assets"])
 
-_READ_CHUNK = 64 * 1024
-
 
 @router.post("")
 async def upload_asset(user: str | None = None, file: UploadFile = File(...)) -> dict:
-    # 大小闸门：分块累积，超限立即拒绝（此时尚未写盘，无残留）
-    buf = bytearray()
-    while True:
-        chunk = await file.read(_READ_CHUNK)
-        if not chunk:
-            break
-        buf.extend(chunk)
-        if len(buf) > asset_store.MAX_ASSET_BYTES:
-            raise ValidationFailed(
-                f"图片过大，上限 {asset_store.MAX_ASSET_BYTES // 1024 // 1024}MB"
-            )
-    data = bytes(buf)
-
-    ext = asset_store.client_ext(file.filename)
-    kind = asset_store.sniff_kind(data[:16])
-    if kind is None or not asset_store.same_family(ext, kind):
-        raise ValidationFailed("文件内容与扩展名不符，仅支持 png/jpg/jpeg/gif/webp 图片")
-
+    data, ext = await read_validated_image(file)
     return {"ok": True, "data": asset_store.save_asset(data_root(user), MEMOS, data, ext)}
 
 

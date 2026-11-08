@@ -29,6 +29,8 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     shutil.copy(SAMPLES / "calendar.ics", user_dir / "calendar.ics")
     for md in (SAMPLES / "memos").glob("*.md"):
         shutil.copy(md, user_dir / "memos" / md.name)
+    # 笔记样例含子目录（k8s/），整树拷贝以保留文件夹结构
+    shutil.copytree(SAMPLES / "notes", user_dir / "notes")
     shutil.copytree(SAMPLES / "timeline", user_dir / "timeline")
     return TestClient(app)
 

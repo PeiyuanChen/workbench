@@ -57,10 +57,17 @@ def _prune_backups(backup_dir: Path, keep: int) -> None:
         p.unlink(missing_ok=True)
 
 
-def backup_file(src: Path, backup_dir: Path, keep: int = DEFAULT_KEEP) -> Path | None:
+def backup_file(
+    src: Path,
+    backup_dir: Path,
+    keep: int = DEFAULT_KEEP,
+    name_prefix: str = "",
+) -> Path | None:
     """把 src 复制进 backup_dir（存在才备份），滚动保留最近 keep 份。
 
     返回备份文件路径；src 不存在（首写）返回 None，不创建备份目录。
+    name_prefix：笔记子目录场景的文件夹前缀（如 "k8s__网络__"），备份在扁平
+    .backup/ 里防跨目录同名冲突；备忘平铺场景传默认空串，命名与历史一致。
     """
     src = Path(src)
     if not src.exists():
@@ -71,7 +78,7 @@ def backup_file(src: Path, backup_dir: Path, keep: int = DEFAULT_KEEP) -> Path |
     dt = datetime.now(timezone.utc)
     while True:
         stamp = dt.strftime(_STAMP_FMT)
-        dst = backup_dir / f"{src.stem}-{stamp}{src.suffix}"
+        dst = backup_dir / f"{name_prefix}{src.stem}-{stamp}{src.suffix}"
         if not dst.exists():
             break
         dt += timedelta(microseconds=1)
@@ -109,16 +116,17 @@ def safe_write(
     verify: Callable[[Path], None],
     backup_dir: Path,
     keep: int = DEFAULT_KEEP,
+    name_prefix: str = "",
 ) -> Path | None:
     """安全写闸门：备份 → 原子写 → 回读校验。
 
     verify(path) 由调用方注入（如 Calendar.from_ical / frontmatter 重读），
     抛任何异常都视为文件损坏：恢复备份并抛 AtomicWriteError；
     首写（无备份可恢复）则删除损坏新文件——磁盘上永远不留坏数据。
-    返回本次生成的备份路径（首写为 None）。
+    返回本次生成的备份路径（首写为 None）。name_prefix 透传给 backup_file。
     """
     path = Path(path)
-    backup = backup_file(path, backup_dir, keep)
+    backup = backup_file(path, backup_dir, keep, name_prefix=name_prefix)
     atomic_write_bytes(path, data)
     try:
         verify(path)

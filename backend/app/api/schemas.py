@@ -97,3 +97,44 @@ class MemoUpdate(BaseModel):
     content: str = ""
     tags: list[str] = Field(default_factory=list)
     related: list[str] = Field(default_factory=list)
+
+
+class NoteCreate(BaseModel):
+    """POST /api/notes 请求体：folder 可选（默认根层，须指向已存在文件夹）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    content: str = ""
+    tags: list[str] = Field(default_factory=list)
+    related: list[str] = Field(default_factory=list)
+    folder: str = ""
+
+
+class NoteUpdate(BaseModel):
+    """PUT /api/notes/{id} 请求体：全文更新；folder 显式传入才触发移动。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    content: str = ""
+    tags: list[str] = Field(default_factory=list)
+    related: list[str] = Field(default_factory=list)
+    folder: str | None = None
+
+
+class FolderCreate(BaseModel):
+    """POST /api/notes/folders 请求体：真实子目录相对路径（支持多层嵌套/中文）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+
+
+class FolderRename(BaseModel):
+    """PUT /api/notes/folders 请求体：同父目录重命名。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    new_path: str

@@ -11,7 +11,6 @@ from pathlib import Path
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
-import pytest
 from fastapi.testclient import TestClient
 
 SAMPLE_MEMO = "20260903-memo-workbench-arch"
@@ -186,21 +185,3 @@ def test_memo_backup_rolling_10(client: TestClient, tester_dir: Path) -> None:
     for i in range(12):
         assert _put(client, m["id"], {"title": "滚动", "content": f"v{i}"}).status_code == 200
     assert len(_backups(tester_dir)) == 10, "memos/.backup 滚动保留 10 份"
-
-
-# ---------------------------------------------------------------- T1：旧路径 404
-
-
-@pytest.mark.parametrize("method,path", [
-    ("GET", "/api/notes"),
-    ("GET", "/api/notes/whatever"),
-    ("POST", "/api/notes"),
-    ("PUT", "/api/notes/whatever"),
-    ("DELETE", "/api/notes/whatever"),
-    ("GET", "/api/notes/assets/x.png"),
-    ("POST", "/api/notes/assets"),
-])
-def test_old_notes_routes_return_404(client: TestClient, method: str, path: str) -> None:
-    """T1 验收：旧 /api/notes 全链路下线，任何方法都 404（不做兼容别名）。"""
-    r = client.request(method, path, params={"user": "tester"}, json={"title": "x"})
-    assert r.status_code == 404

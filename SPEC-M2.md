@@ -82,7 +82,7 @@ dtend 语义：API 的 `dtend` **恒为 RFC 5545 排他语义**（GET/POST 对�
 ### 2.3 备忘（T1 起全链路命名 memos）
 
 物理目录 `data/users/<user>/memos/`，图片资产 `memos/assets/`，frontmatter id 前缀 `memo-`。
-旧 `/api/notes` 路径不保留兼容别名，任何方法请求一律 404（测试 `test_old_notes_routes_return_404` 锁死）。
+`/api/notes` 命名空间自 T3（#4，ADR-0001）起由新「笔记」模块正式启用（真实文件夹 + CRUD + 资产），T1 时期的 404 下线闸门与 `test_old_notes_routes_return_404` 已随之撤销；备忘只走 `/api/memos`，两模块物理隔离。
 
 > **T1/T2 迁移状态（跟踪票 #2/#3，均已完成）**：T1 改代码链路与 git 跟踪的
 > example/data-samples；T2 由 `scripts/migrate-notes-to-memos.py` 对真实

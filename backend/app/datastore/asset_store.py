@@ -14,13 +14,17 @@ T1 起按 MarkdownCollection 配置决定落盘位置（备忘 memos/assets，
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from app.core.errors import NotFound, ValidationFailed
 from app.core.uids import hex_suffix, local_now
 from app.datastore.atomic import atomic_write_bytes
-from app.datastore.md_store import MarkdownCollection, collection_dir
+from app.datastore.md_store import (
+    MarkdownCollection,
+    collection_dir,
+    depth_prefix,
+    folder_flat_prefix,
+)
 
 MAX_ASSET_BYTES = 5 * 1024 * 1024  # 5 MiB（路由层在写盘前按此限流）
 
@@ -33,8 +37,18 @@ MEDIA_TYPES: dict[str, str] = {
     ".webp": "image/webp",
 }
 
-# 磁盘名白名单：字母/数字开头，仅含 . _ -，长度 ≤100（挡掉 ../、斜杠、点开头）
-SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
+# 磁盘名安全规则（名字全部服务端生成，含笔记文件夹前缀时可带中文/内部空格）：
+# 拒绝路径分隔符、点段穿越、Windows 非法字符、控制字符、点/短横开头、首尾空白、超长。
+_ILLEGAL_NAME_CHARS = set('<>:"/\\|?*')
+MAX_NAME_LEN = 150
+
+
+def _is_safe_asset_name(name: str) -> bool:
+    if not name or len(name) > MAX_NAME_LEN:
+        return False
+    if name != name.strip() or name[0] in ".-" or ".." in name:
+        return False
+    return not any(c in _ILLEGAL_NAME_CHARS or ord(c) < 32 for c in name)
 
 
 def _assets_dir(base_dir: Path, collection: MarkdownCollection) -> Path:
@@ -75,32 +89,45 @@ def same_family(ext_a: str, ext_b: str) -> bool:
     return ext_a == ext_b or ({ext_a, ext_b} <= fam)
 
 
-def new_asset_name(assets_dir: Path, ext: str, now=None) -> str:
-    """生成不冲突的磁盘名：YYYYMMDD-HHMMSS-<8位hex><扩展名>，冲突重试。"""
+def new_asset_name(assets_dir: Path, ext: str, now=None, prefix: str = "") -> str:
+    """生成不冲突的磁盘名：[文件夹前缀]YYYYMMDD-HHMMSS-<8位hex><扩展名>，冲突重试。
+
+    prefix 为笔记文件夹扁平前缀（如 "k8s__网络__"）；备忘/根层笔记传空串。
+    """
     stamp = (now or local_now()).strftime("%Y%m%d-%H%M%S")
-    name = f"{stamp}-{hex_suffix()}{hex_suffix()}{ext}"
+    name = f"{prefix}{stamp}-{hex_suffix()}{hex_suffix()}{ext}"
     if not (assets_dir / name).exists():
         return name
     for _ in range(16):
-        name = f"{stamp}-{hex_suffix()}{hex_suffix()}{ext}"
+        name = f"{prefix}{stamp}-{hex_suffix()}{hex_suffix()}{ext}"
         if not (assets_dir / name).exists():
             return name
     raise ValidationFailed("图片命名冲突，请重试")  # 极小概率：16 次全撞
 
 
-def save_asset(base_dir: Path, collection: MarkdownCollection, data: bytes, ext: str) -> dict:
+def save_asset(
+    base_dir: Path,
+    collection: MarkdownCollection,
+    data: bytes,
+    ext: str,
+    folder: str = "",
+) -> dict:
     """原子写入一张图片，返回 {name, path, size, content_type}。
 
     调用方须先完成大小闸门、扩展名白名单与 magic 嗅探。
-    path 相对集合目录（正文以 ![](assets/<name>) 引用），与集合名解耦。
+    笔记资产平铺于 <集合>/assets/，磁盘名带文件夹扁平前缀（根层/备忘无前缀）；
+    path 是按笔记所在深度计算的正文相对链接（深度 2 → ../../assets/<name>）。
     """
+    prefix = folder_flat_prefix(folder)
     assets = _assets_dir(base_dir, collection)
     assets.mkdir(parents=True, exist_ok=True)
-    name = new_asset_name(assets, ext)
+    name = new_asset_name(assets, ext, prefix=prefix)
     atomic_write_bytes(assets / name, data)
+    # 深度相对链接规则与 md_store.depth_prefix 单一出处，移动改写共用同一约定
+    rel_path = depth_prefix(folder) + f"{collection.assets_dirname}/{name}"
     return {
         "name": name,
-        "path": f"{collection.assets_dirname}/{name}",
+        "path": rel_path,
         "size": len(data),
         "content_type": MEDIA_TYPES[ext],
     }
@@ -108,7 +135,7 @@ def save_asset(base_dir: Path, collection: MarkdownCollection, data: bytes, ext:
 
 def resolve_asset(base_dir: Path, collection: MarkdownCollection, name: str) -> tuple[Path, str]:
     """GET 取图：校验名字 → 后缀 → 目录边界 → 文件存在；返回 (路径, media_type)。"""
-    if not SAFE_NAME_RE.match(name):
+    if not _is_safe_asset_name(name):
         # 路径穿越/非法字符一律按 422（不暴露文件是否存在）
         raise ValidationFailed("图片名非法")
     ext = Path(name).suffix.lower()

@@ -351,11 +351,37 @@ print('[6e OK] DELETE 备忘')"
 [ "$(curlx -o /dev/null -w '%{http_code}' "$BASE/memos/$MEMO_ENC?user=$SANDBOX_USER")" = "404" ]
 echo "[6f OK] 删除后 404"
 
-# T1 旧路径下线闸门：/api/notes 任何请求一律 404（不保留兼容别名）
-[ "$(curlx -o /dev/null -w '%{http_code}' "$BASE/notes?user=$SANDBOX_USER")" = "404" ]
-[ "$(curlx -o /dev/null -w '%{http_code}' -X POST "$BASE/notes?user=$SANDBOX_USER" \
-    -H 'Content-Type: application/json' -d '{"title":"x"}')" = "404" ]
-echo "[6g OK] 旧 /api/notes 路径已下线（GET/POST 均 404）"
+# T3（#4，ADR-0001）：/api/notes 命名空间已由「笔记」模块正式启用，
+# T1 的 404 闸门随之撤销。沙箱基底含 example 的 2 篇笔记样例（根层 + k8s/）。
+curlx "$BASE/notes?user=$SANDBOX_USER" | "$PY" -c "
+import sys, json
+d = json.load(sys.stdin)
+assert set(d) == {'count', 'folders', 'items'}, d
+assert d['count'] == 2 and {'path': 'k8s', 'name': 'k8s'} in d['folders'], d
+assert all('content' not in i for i in d['items']), '列表不含全文'
+print('[6g-1 OK] 笔记列表扁平形状（2 篇 + k8s 文件夹，保留目录已排除）')"
+
+# 保留名守卫：assets 不可作为文件夹名（422 中文 detail）
+[ "$(curlx -o /dev/null -w '%{http_code}' -X POST "$BASE/notes/folders?user=$SANDBOX_USER" \
+    -H 'Content-Type: application/json' -d '{"path":"assets"}')" = "422" ]
+
+NOTE_ID=$(curlx -X POST "$BASE/notes?user=$SANDBOX_USER" \
+    -H 'Content-Type: application/json' -d '{"title":"accept-note-smoke"}' | "$PY" -c "
+import sys, json
+n = json.load(sys.stdin)['data']
+assert n['id'].split('-')[1] == 'note' and n['folder'] == '', n
+print(n['id'])")
+export NOTE_ID
+echo "[6g-2 OK] 新建笔记 id=$NOTE_ID（note- 前缀，根层散放）"
+
+curlx -X DELETE "$BASE/notes/$NOTE_ID?user=$SANDBOX_USER" | "$PY" -c "
+import sys, json
+assert json.load(sys.stdin)['ok']
+print('[6g-3 OK] 删除笔记（删除前备份在 notes/.backup）')"
+curlx "$BASE/notes?user=$SANDBOX_USER" | "$PY" -c "
+import sys, json
+assert json.load(sys.stdin)['count'] == 2
+print('[6g OK] 笔记模块命名空间启用：列表/守卫/新建/删除生命周期闭环')"
 
 # ============================================================
 # 7) 事件：POST 全天（dtend 排他）→ 当月聚合可见（含首尾不含排他日）→ DELETE → 消失

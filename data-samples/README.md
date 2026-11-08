@@ -10,6 +10,7 @@
 | 日历（事件） | iCalendar `VEVENT`（.ics） | `calendar.ics` |
 | 四象限 | **不是独立数据**——就是待办上的两个标签 `X-IMPORTANT` / `X-URGENT` | 由 `calendar.ics` 生成 |
 | 备忘 memo | **Markdown** + YAML frontmatter | `memos/*.md` |
+| 笔记 note | **Markdown** + YAML frontmatter（真实子目录分类，id 前缀 note-） | `notes/**/*.md` |
 | 时间线 timeline | **Markdown**（按月一文件） | `timeline/YYYY/MM.md` |
 
 ## 目录结构
@@ -19,6 +20,10 @@ data-samples/
 ├─ calendar.ics                  # 待办 + 日历（CalDAV 标准，任何日历软件能打开）
 ├─ memos/                        # 备忘：一篇一个 .md（id 前缀 memo-）
 │  └─ 2026-09-03-工作台设计决策.md
+├─ notes/                        # 笔记：根层可散放，子目录即真实文件夹（id 前缀 note-）
+│  ├─ 2026-09-03-Kubernetes入门.md
+│  └─ k8s/
+│     └─ 2026-11-03-网络模型.md
 └─ timeline/                     # 时间线：按月回溯
    └─ 2026/
       └─ 03.md

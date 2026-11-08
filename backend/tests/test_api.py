@@ -86,6 +86,17 @@ def test_memos(client: TestClient) -> None:
     assert _get(client, "/api/memos/no-such-memo").status_code == 404
 
 
+def test_notes_tree_shape(client: TestClient) -> None:
+    body = _get(client, "/api/notes").json()
+    assert set(body) == {"count", "folders", "items"}
+    assert body["count"] == 2
+    assert body["folders"] == [{"path": "k8s", "name": "k8s"}]
+    note_id = "20261103-note-k8s-network"
+    detail = _get(client, f"/api/notes/{note_id}").json()
+    assert detail["folder"] == "k8s" and "Pod 网络三原则" in detail["content"]
+    assert _get(client, "/api/notes/no-such-note").status_code == 404
+
+
 def test_timeline(client: TestClient) -> None:
     got = _get(client, "/api/timeline/2026/3").json()
     assert got["exists"] is True and "川剧智能问答" in got["body"]
@@ -99,4 +110,7 @@ def test_empty_user_dir_returns_empty_not_500(client: TestClient) -> None:
     assert client.get("/api/todos", params={"user": "ghost"}).json() == {"count": 0, "items": []}
     assert client.get("/api/events", params={"month": "2026-09", "user": "ghost"}).json()["items"] == []
     assert client.get("/api/memos", params={"user": "ghost"}).json()["count"] == 0
+    assert client.get("/api/notes", params={"user": "ghost"}).json() == {
+        "count": 0, "folders": [], "items": []
+    }
     assert client.get("/api/timeline/2026/3", params={"user": "ghost"}).json()["exists"] is False

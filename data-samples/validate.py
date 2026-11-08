@@ -11,7 +11,8 @@
   3. VTODO 必有 UID/DTSTAMP 与 X-IMPORTANT/X-URGENT，且取值 ∈ {TRUE, FALSE}
   4. RELATED-TO（RELTYPE=CHILD）必须指向已存在的 UID
   5. VEVENT 必有 DTSTART，且 DTEND 与 DURATION 至少有一个
-  6. memos/ 与 timeline/ 的 Markdown frontmatter 必含 id / tags / related
+  6. memos/、notes/（递归，排除 .backup/assets 保留子树）与 timeline/ 的
+     Markdown frontmatter 必含 id / tags / related
 
 另打印信息性覆盖统计（不作为失败条件）：时间三阶段、父子任务样例覆盖情况。
 """
@@ -137,6 +138,12 @@ def main() -> int:
     validate_calendar(target / "calendar.ics", errors)
 
     md_files = sorted((target / "memos").glob("*.md")) if (target / "memos").exists() else []
+    if (target / "notes").exists():
+        # 笔记递归子目录；.backup（冷快照）/assets（图片目录）不是活跃文档，跳过
+        md_files += [
+            p for p in sorted((target / "notes").rglob("*.md"))
+            if not any(part in (".backup", "assets") for part in p.relative_to(target / "notes").parts)
+        ]
     md_files += sorted((target / "timeline").rglob("*.md")) if (target / "timeline").exists() else []
     for md in md_files:
         validate_markdown(md, errors)

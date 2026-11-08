@@ -38,7 +38,7 @@ Web 先行（PWA），未来 iOS/Android 复用同一后端。
 
 ## API（M2 可写，M3 加生成；M1 只读 GET 已完成）
 
-M2 写：`POST/PATCH/DELETE /api/todos`（含 parent、DUE、DTSTART+DURATION、象限标签）、`POST/PATCH/DELETE /api/events`、`PUT/POST /api/memos`（备忘；物理目录 `memos/`、id 前缀 `memo-`、资产端点 `/api/memos/assets`，旧 `/api/notes` 已下线返回 404）。
+M2 写：`POST/PATCH/DELETE /api/todos`（含 parent、DUE、DTSTART+DURATION、象限标签）、`POST/PATCH/DELETE /api/events`、`PUT/POST /api/memos`（备忘；物理目录 `memos/`、id 前缀 `memo-`、资产端点 `/api/memos/assets`）、`/api/notes`（T3 起为「笔记」模块：真实文件夹 CRUD + 笔记 CRUD + `/api/notes/assets`，ADR-0001/0002）。
 > 迁移状态（#2/T1、#3/T2 均已完成）：全链路已切到 memos；真实 `data/users/me/` 已由 `scripts/migrate-notes-to-memos.py` 一次性迁到 `memos/`（仓外 zip 备份、冷备份不重写、失败自动回滚）。该脚本带防重复执行预检，勿对已迁移目录再跑。
 M3：`POST /api/timeline/generate?range=2026-03`（LLM 基于该范围待办+事件+备忘，用固定模板 prompt 生成，**落盘为 timeline md**，可重新生成、可手改）。
 

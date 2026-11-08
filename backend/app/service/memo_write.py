@@ -9,58 +9,21 @@
   同步替换首行 H1 并重命名文件（保留原创建日期前缀，id/created 不变），防"标题弹回"。
 - PUT = 全文更新：tags/related 未传即重置为 []（与 SPEC "全文更新" 一致）。
 - 写前备份 memos/.backup/（滚动 10 份）+ 原子写 + 回读闸门，全部由 md_store 承担。
+
+标题/H1/日期前缀等与笔记共用的规则在 service.markdown_docs，禁止本地复制。
 """
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import frontmatter
 
-from app.core.errors import ApiError, NotFound, ValidationFailed
+from app.core.errors import ApiError, NotFound
 from app.core.uids import hex_suffix, local_now, new_doc_id
 from app.datastore import md_store
 from app.datastore.md_store import MEMOS
-
-# 标题长度上限（与待办 summary 同口径；文件名 slug 另有 60 字截断）
-TITLE_MAX = 200
-
-_FILENAME_DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-")
-
-
-def _clean_title(value) -> str:
-    """title 去空白后非空、≤200 字；内部换行/连续空白折叠为单空格（保 H1 单行）。"""
-    s = " ".join(str(value or "").split())
-    if not s:
-        raise ValidationFailed("title 不能为空")
-    if len(s) > TITLE_MAX:
-        raise ValidationFailed(f"title 过长（≤{TITLE_MAX} 字）：当前 {len(s)} 字")
-    return s
-
-
-def _compose_body(title: str, content: str) -> str:
-    """拼装正文：首行 H1 = 标题（三源一致），后接用户正文。
-
-    - content 已以 "# {title}" 开头 → 原样保留（GET→PUT 幂等往返）；
-    - content 以其他 H1 开头 → 替换为新标题（改标题场景，防双 H1）；
-    - 其余 → 前面补 H1。
-    """
-    content = (content or "").strip()
-    if not content:
-        return f"# {title}\n"
-    first, _, rest = content.partition("\n")
-    if first.strip() == f"# {title}":
-        return content
-    if first.startswith("# "):
-        rest = rest.strip("\n")
-        return f"# {title}\n\n{rest}" if rest else f"# {title}\n"
-    return f"# {title}\n\n{content}"
-
-
-def _date_from_filename(name: str) -> str | None:
-    m = _FILENAME_DATE_RE.match(name)
-    return m.group(1) if m else None
+from app.service.markdown_docs import clean_title, compose_body, date_from_filename
 
 
 def _load_memo_or_500(base_dir: Path, memo_id: str) -> dict:
@@ -75,7 +38,7 @@ def create_memo(base_dir: Path, payload: dict) -> dict:
 
     服务端生成 id 与文件名（SPEC-M2 §2.3）；created = 上海今天。
     """
-    title = _clean_title(payload.get("title"))
+    title = clean_title(payload.get("title"))
     now = local_now()
     date_str = now.strftime("%Y-%m-%d")
     # id 冲突（同日同题）追加短后缀；文件名冲突由 make_markdown_filename 独立处理
@@ -92,7 +55,7 @@ def create_memo(base_dir: Path, payload: dict) -> dict:
     }
     md_store.write_markdown(
         base_dir, MEMOS, filename, metadata,
-        _compose_body(title, payload.get("content") or ""),
+        compose_body(title, payload.get("content") or ""),
     )
     return _load_memo_or_500(base_dir, memo_id)
 
@@ -102,14 +65,14 @@ def update_memo(base_dir: Path, memo_id: str, payload: dict) -> dict:
 
     标题变更 → 重命名文件（保留原创建日期前缀），id/created 不变（决策 D）。
     """
-    title = _clean_title(payload.get("title"))
+    title = clean_title(payload.get("title"))
     old_path = md_store.find_markdown_path(base_dir, MEMOS, memo_id)
     if old_path is None:
         raise NotFound(f"备忘不存在: {memo_id}")
     old_meta = dict(frontmatter.load(old_path).metadata)
-    created = str(old_meta.get("created") or "") or _date_from_filename(old_path.name) \
+    created = str(old_meta.get("created") or "") or date_from_filename(old_path.name) \
         or local_now().strftime("%Y-%m-%d")
-    date_prefix = _date_from_filename(old_path.name) or created[:10]
+    date_prefix = date_from_filename(old_path.name) or created[:10]
     metadata = {
         "id": str(old_meta.get("id") or memo_id),  # 旧 id 不变（SPEC-M2 §2.3）
         "created": created,
@@ -124,7 +87,7 @@ def update_memo(base_dir: Path, memo_id: str, payload: dict) -> dict:
         new_filename = md_store.make_markdown_filename(base_dir, MEMOS, date_prefix, title)
     md_store.write_markdown(
         base_dir, MEMOS, new_filename, metadata,
-        _compose_body(title, payload.get("content") or ""),
+        compose_body(title, payload.get("content") or ""),
         old_path=None if new_filename == old_path.name else old_path,
     )
     return _load_memo_or_500(base_dir, metadata["id"])

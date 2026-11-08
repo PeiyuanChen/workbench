@@ -8,7 +8,7 @@
 
 写响应信封 {"ok":true,"data":<完整 memo 含 content>}；
 错误 = 4xx/5xx + {"detail":"中文"}（main.py 统一 handler）。
-旧 /api/notes 路径不保留兼容别名，请求一律 404（见 test_old_notes_routes_return_404）。
+/notes 命名空间自 T3（#4，ADR-0001）起归「笔记」模块，见 routes_notes.py。
 """
 
 from fastapi import APIRouter, HTTPException
