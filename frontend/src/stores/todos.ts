@@ -112,10 +112,17 @@ export const useTodosStore = defineStore("todos", () => {
     }),
   );
 
+  // 归档区：按完成/放弃时间倒序（最近了结的在前）。
+  // completed→dtstamp→created 回退：放弃项无 COMPLETED，用状态变更时刷新的 DTSTAMP 顶替。
+  const archivedSorted = computed(() => {
+    const key = (t: Todo) => t.completed ?? t.dtstamp ?? t.created ?? "";
+    return [...archived.value].sort((a, b) => key(b).localeCompare(key(a)));
+  });
+
   return {
     items, archived, archivedLoaded, loading, error,
     load, loadArchived, fetchOne,
     create, patch, act, complete, reopen, abandon, remove,
-    byQuadrant, unscheduled, scheduled,
+    byQuadrant, unscheduled, scheduled, archivedSorted,
   };
 });

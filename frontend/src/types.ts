@@ -7,6 +7,8 @@ export type TodoStatus = "NEEDS-ACTION" | "IN-PROCESS" | "COMPLETED" | "CANCELLE
 
 export interface Todo {
   uid: string;
+  dtstamp: string | null; // RFC 修订时间；完成/放弃/恢复时刷新，归档排序回退键
+  completed: string | null; // COMPLETED 时间（UTC ISO）；CANCELLED 时为 null
   summary: string;
   description: string;
   status: TodoStatus;

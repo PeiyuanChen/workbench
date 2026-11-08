@@ -51,7 +51,7 @@ async function restore(uid: string) {
       <div v-if="error" class="qa-error">⚠ {{ error }}</div>
       <div v-if="!todos.archived.length && !error" class="archive-empty">暂无已完成或已放弃的待办</div>
       <div
-        v-for="t in todos.archived"
+        v-for="t in todos.archivedSorted"
         :key="t.uid"
         class="row archive-row"
         :class="{ cancelled: t.status === 'CANCELLED' }"

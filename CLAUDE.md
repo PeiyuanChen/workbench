@@ -92,7 +92,34 @@ M3：`POST /api/timeline/generate?range=2026-03`（LLM 基于该范围待办+事
 - **M3**：时间线 LLM 生成 + 旧数据（TickTick 等）AI 迁入脚本；Radicale/CalDAV 接入、拖拽排期等 M2 未尽完善项。
 - **M4**：自托管 + PWA 手机端 + 可选日历双向同步。
 
+## 笔记模块验收（T1–T5，issues #1–#6）
+
+- 验收命令（git-bash 仓库根；后端无需预启动，脚本自起沙箱 uvicorn:8767，结束自动清理）：
+  ```bash
+  bash scripts/accept-notes.sh
+  ```
+  期望：退出码 0，末行输出 `[笔记模块验收通过]`。覆盖笔记 API 全链（CRUD、真实文件夹
+  新建/重命名/守卫、跨文件夹移动、图片资产与移动后链接按深度改写）、数据主权闸门
+  （validate.py + 纯文本 .md 固定四键 frontmatter）、T2 迁移 CLI 沙箱复演（notes→memos、
+  冷备份不动、仓库外 zip、防重复执行预检拒绝）、pytest 全绿与前端 vue-tsc/build。
+  浏览器人工走查清单（五视图导航、备忘零回退、笔记三模式、文件夹与窄屏）见
+  `docs/acceptance/notes-browser-walkthrough.md`，人工项由用户自查并记录。
+
 ## 多用户扩展预留（现在单用户，但别埋雷）
 
 - 不写登录/权限；但所有数据路径走 `core.data_root()`，目录用 `data/users/me/...` 起步。
 - 将来加"每人私有工作台"只需：加认证 + data_root(user) + 查询过滤；业务逻辑不变。**协作式多用户不做、不预埋。**
+
+## Agent skills
+
+### Issue tracker
+
+Issue 与 spec 追踪在 GitHub Issues，统一用 `gh` CLI 操作。见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+使用五个默认 triage 标签：`needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human`、`wontfix`。见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+单一上下文（single-context）：根目录 `GLOSSARY.md` + `docs/adr/`（已创建，由 /domain-modeling 按需增补）。见 `docs/agents/domain.md`。
