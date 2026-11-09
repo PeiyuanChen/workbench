@@ -1,12 +1,31 @@
 # 个人工作台（Local-First Workbench）
 
-一个**本地优先（local-first）的单用户个人工作台**，Web 应用，包含五个视图：
+## 为什么做这个工作台
+
+我希望能良好地管理自己的事项——待办、日程、备忘与周期性回顾，但不想把长期积累的
+个人数据锁进某个商业应用的私有格式和云端账户里。这个工程坚持两条：**数据采用规范
+标准**（iCalendar RFC 5545、Markdown），**数据落盘到本地、由自己维护**（没有数据库，
+只有纯文本文件）。
+
+这种方式能带来两个好处：
+
+1. **长生命周期的管理与维护** —— 数据不依附于任何应用的存续。哪怕本项目停止维护，
+   `.ics` / `.md` 文件依然能用记事本、Obsidian、Apple/Google 日历或任意 CalDAV
+   客户端打开，也可以随时自己写脚本迁移。
+2. **便于与 LLM 协作** —— 纯文本即上下文。待办、事件、备忘都是模型可以直接读写的
+   开放格式，AI 辅助整理、生成时间线、迁入旧数据时，不需要穿越任何私有 API 或
+   数据库 schema。
+
+## 是什么
+
+一个**本地优先（local-first）的单用户个人工作台**，Web 应用，包含六个视图：
 
 - **四象限** —— 艾森豪威尔优先级（重要×紧急，2×2 现场计算，不是独立存储）
 - **待办** —— 分"未排期 · 最近要做"与"已排期 · 近期"，支持父子任务与进度
 - **日历** —— 月视图：执行时间块 ▸ / 跨多天 ▣ / 截止小旗 ⚑ / 普通事件 ●
 - **时间线** —— 按月回顾（M3 起由 LLM 生成）
-- **备忘** —— Markdown 笔记列表 + 详情
+- **备忘** —— Markdown 备忘列表 + 详情
+- **笔记** —— 真实文件夹树 + Markdown 笔记，与备忘共用编辑内核
 
 ## 🚨 第一性原则：数据主权
 
@@ -16,6 +35,7 @@
 | --- | --- | --- |
 | 待办 + 日历事件 | iCalendar `.ics`（RFC 5545） | `data/users/{用户}/calendar.ics` |
 | 备忘 | Markdown（YAML frontmatter，id 前缀 `memo-`） | `data/users/{用户}/memos/YYYY-MM-DD-标题.md` |
+| 笔记 | Markdown（YAML frontmatter，id 前缀 `note-`） | `data/users/{用户}/notes/<文件夹>/YYYY-MM-DD-标题.md` |
 | 时间线 | Markdown（YAML frontmatter） | `data/users/{用户}/timeline/YYYY/MM.md` |
 
 没有本应用，这些文件也能用记事本、Obsidian、Apple/Google 日历、任意 CalDAV 客户端打开。
@@ -27,10 +47,11 @@
 
 ```
 workbench/
-├─ backend/        # FastAPI 后端（api → service → datastore 单向依赖）
+├─ backend/        # FastAPI 后端（api → service → datastore 单向依赖；API 参考见 backend/README.md）
 ├─ frontend/       # Vue 3 + Vite + TS + Tailwind + Pinia
+├─ scripts/        # 一键启动 dev.sh 与各里程碑验收脚本
 ├─ data/users/
-│  ├─ me/          # 你的实际数据目录（默认为空，各接口容错返回空）
+│  ├─ me/          # 你的实际数据目录
 │  └─ example/     # 示例数据（演示/测试，可随时改着玩）
 ├─ data-samples/   # 参考样例 + validate.py 契约校验器
 ├─ prototype/      # 静态原型（布局基准）
@@ -42,10 +63,29 @@ workbench/
 - Python **3.11+**（推荐用 [uv](https://github.com/astral-sh/uv) 管理）
 - Node.js **18+**
 
-## 一键启动（不推荐，自用，windows）
-bash scripts/dev.sh      # 停止：该窗口 Ctrl+C
+## 快速开始（一键启动）
 
-## 启动后端
+Windows git-bash，仓库根目录执行：
+
+```bash
+bash scripts/dev.sh
+```
+
+脚本一次完成：起 FastAPI 后端（:8000）→ 起 Vite 前端（:5173）→ 探活通过后自动打开
+浏览器。在该终端按 **Ctrl+C** 同时停掉前后端。日志落在仓库根的
+`.dev-backend.log` / `.dev-frontend.log`。
+
+> 首次运行前需准备好后端虚拟环境（见下节"手动启动"），否则脚本会报找不到解释器。
+
+浏览器打开 **http://127.0.0.1:5173**，侧栏底部可切换数据源：
+
+- `example` —— 示例数据（默认），首次打开即可看到完整效果；
+- `me` —— 你自己的数据目录。把 `.ics` / `.md` 文件放进 `data/users/me/`
+  （结构见上表），刷新页面即可；直接用文本编辑器改文件，刷新即变。
+
+## 手动启动（分别调试前后端时用）
+
+### 后端
 
 ```bash
 cd backend
@@ -70,7 +110,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 | `WORKBENCH_USER` | 默认用户目录（未传 `?user=` 时用） | `me` |
 | `WORKBENCH_DATA` | 数据总根（仍按 `users/{user}/` 组织） | 仓库内 `data/` |
 
-## 启动前端
+### 前端
 
 ```bash
 cd frontend
@@ -80,50 +120,16 @@ npm run dev
 
 开发服务器已配置代理：前端对 `/api/*` 的请求自动转发到 `http://127.0.0.1:8000`，无需处理跨域。
 
-## 访问方式
+## HTTP API
 
-浏览器打开 **http://127.0.0.1:5173**
-
-1. 左侧导航切换五个视图：四象限 / 待办 / 日历 / 时间线 / 备忘。
-2. 侧栏底部有**数据源切换**：
-   - `example` —— 示例数据（默认），首次打开即可看到完整效果；
-   - `me` —— 你自己的数据目录（初始为空，各视图显示空态）。
-3. 想看到自己的真实数据：把 `.ics` / `.md` 文件放进 `data/users/me/`（结构见上表），刷新页面即可；或用文本编辑器直接改文件，刷新即变。
-
-### API
-
-| 端点 | 说明 |
-| --- | --- |
-| `GET /api/health` | 健康检查 |
-| `GET /api/todos?view=&unscheduled=&status=&user=` | 待办（含父子层级、象限、进度、时间三阶段） |
-| `GET /api/todos/{uid}` | 单条待办 |
-| `GET /api/events?month=YYYY-MM&user=` | 日历聚合（事件 + 执行块 + 截止标记） |
-| `GET /api/timeline/{year}/{month}?user=` | 时间线（未生成返回 `exists:false`） |
-| `GET /api/memos?user=` / `GET /api/memos/{id}?user=` | 备忘列表 / 详情 |
-
-| 端点 | 说明 |
-| --- | --- |
-| `POST /api/todos` | 新建待办 |
-| `PATCH /api/todos/{uid}` | 更新待办（不接受 status） |
-| `POST /api/todos/{uid}/complete` | 勾选完成 |
-| `POST /api/todos/{uid}/reopen` | 取消完成 / 恢复放弃 |
-| `POST /api/todos/{uid}/abandon` | 放弃 |
-| `DELETE /api/todos/{uid}` | 物理删除（级联子任务） |
-| `GET /api/events/{uid}` | 单条事件详情 |
-| `POST /api/events` | 新建事件 |
-| `PATCH /api/events/{uid}` | 更新事件 |
-| `DELETE /api/events/{uid}` | 删除事件 |
-| `POST /api/memos` | 新建备忘 |
-| `PUT /api/memos/{id}` | 全文更新备忘 |
-| `DELETE /api/memos/{id}` | 删除备忘 |
-
-`user` 参数缺省取 `WORKBENCH_USER`（默认 `me`）。示例：
-`http://127.0.0.1:8000/api/todos?user=example`
+API 参考（全部端点、查询参数、写操作语义）统一在 **[backend/README.md](backend/README.md)**
+维护，根 README 不再重复，避免两份文档漂移。
 
 ## 测试与校验
 
 ```bash
-# 后端单元/集成测试（182 项：读写往返、中文折行、象限归位、父子进度、跨月裁剪、API、原子写、状态机、集合内核隔离、旧路由 404）
+# 后端单元/集成测试：读写往返、中文折行、象限归位、父子进度、跨月裁剪、
+# API、原子写、状态机、集合内核隔离、旧路由 404
 cd backend && uv run pytest        # 或 .venv 下：python -m pytest
 
 # 数据契约校验（字段合法性、UID 唯一、frontmatter 完整）
@@ -132,9 +138,13 @@ python data-samples/validate.py data/users/example
 
 ## 里程碑
 
-- **M1（已完成）**：只读后端 + 五视图前端，能看到自己的真实数据。
-- **M2（已完成）**：写接口（待办/事件/备忘增删改）+ 前端快速记录与编辑交互。Radicale/CalDAV 推迟到 M3。
+- **M1（已完成）**：只读后端 + 六视图前端，能看到自己的真实数据。
+- **M2（已完成）**：写接口（待办/事件/备忘/笔记增删改）+ 前端快速记录与编辑交互。Radicale/CalDAV 推迟到 M3。
 - **M3**：时间线 LLM 生成；旧数据（TickTick 等）AI 迁入。
 - **M4**：自托管 + PWA 手机端 + 可选日历双向同步。
 
 更多设计背景见 `概要设计-v1.md`、`技术方案-v1.md`、`CLAUDE.md`。
+
+## 许可证
+
+[MIT](LICENSE)

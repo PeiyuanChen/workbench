@@ -2,6 +2,7 @@
 name = "workbench-backend"
 version = "0.1.0"
 description = "个人工作台后端：本地优先，只读写 data/ 下的 .ics/.md 开放文件（M1 只读）"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
