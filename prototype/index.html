@@ -3,131 +3,222 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>工作台 · 静态原型 v2</title>
+<title>工作台 · 静态原型 v3（档案纸/文档风）</title>
 <style>
-  :root{
-    --bg:#f6f7f9; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
-    --red:#ef4444; --amber:#f59e0b; --blue:#3b82f6; --slate:#94a3b8; --green:#059669;
-    --red-bg:#fef2f2; --amber-bg:#fffbeb; --blue-bg:#eff6ff; --slate-bg:#f8fafc; --green-bg:#ecfdf5;
-    --accent:#2563eb;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
-  .app{display:flex;min-height:100vh}
-  .sidebar{width:200px;background:var(--panel);border-right:1px solid var(--line);padding:18px 12px;flex-shrink:0}
-  .brand{font-size:16px;font-weight:700;padding:0 8px 16px;border-bottom:1px solid var(--line);margin-bottom:12px}
-  .brand small{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:2px}
-  .nav button{display:flex;width:100%;align-items:center;gap:9px;padding:10px 12px;border:0;background:none;border-radius:8px;
-    font-size:14px;color:var(--ink);cursor:pointer;text-align:left;margin-bottom:2px}
-  .nav button:hover{background:var(--slate-bg)}
-  .nav button.active{background:var(--blue-bg);color:var(--accent);font-weight:600}
-  .nav .ico{width:18px;text-align:center}
-  .sidebar .foot{position:fixed;bottom:14px;font-size:11px;color:var(--muted);padding-left:8px}
-  .main{flex:1;padding:22px 26px;overflow:auto}
-  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-  .topbar h1{font-size:20px}
-  .topbar .date{color:var(--muted);font-size:13px}
-  .quickadd{background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:11px 14px;color:var(--muted);
-    margin-bottom:20px;cursor:text}
-  .view{display:none}.view.show{display:block}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
-  .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:20px;margin-right:6px}
-  .t-red{background:var(--red-bg);color:var(--red)} .t-amber{background:var(--amber-bg);color:#b45309}
-  .t-blue{background:var(--blue-bg);color:var(--blue)} .t-slate{background:var(--slate-bg);color:var(--muted)}
-  .due{font-size:11px;color:var(--muted)}.due.overdue{color:var(--red);font-weight:600}
-  .nosched{font-size:10px;color:var(--amber);font-weight:600}
+/* ============================================================
+   静态原型 v3：视觉与 frontend/src/styles/app.css 保持同构
+   档案纸/文档风——发丝线结构、黛蓝交互、朱砂点题、宋体立骨架
+   ============================================================ */
+:root{
+  /* 纸与墨 */
+  --paper:#f3f4f1; --surface:#fdfdfc; --ink:#222624; --ink-soft:#4a4f4a;
+  --muted:#6e726c; --faint:#858980; --line:#dbddd6; --line-strong:#c6c9c0;
+  --hover-tint:rgba(34,38,36,.04);
+  /* 交互主色：黛蓝 */
+  --accent:#36557f; --accent-press:#2a4365; --accent-soft:#e7ecf2; --accent-line:#c2cfde;
+  /* 语义/象限色 */
+  --cinnabar:#be432c; --cinnabar-soft:#f3e4df; --cinnabar-line:#e2c4bc;
+  --ochre:#9a6514; --ochre-soft:#f2e9d6; --ochre-line:#e3d2b0;
+  --pine:#2e7a55; --pine-soft:#e4eee8; --pine-line:#bfd8ca;
+  --stone:#78756d; --stone-soft:#ecebe6;
+  /* 字体（系统栈，零依赖） */
+  --font-serif:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","SimSun",Georgia,serif;
+  --font-sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+  --r-control:3px; --r-surface:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font-sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+::selection{background:rgba(54,85,127,.18)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:focus:not(:focus-visible){outline:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 
-  .quad{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .qcell{border-radius:12px;padding:14px;min-height:230px;border:1px solid var(--line)}
-  .qcell h3{font-size:14px;margin-bottom:2px}.qcell .hint{font-size:11px;margin-bottom:10px;opacity:.8}
-  .q1{background:var(--red-bg)}.q1 h3{color:var(--red)} .q2{background:var(--blue-bg)}.q2 h3{color:var(--blue)}
-  .q3{background:var(--amber-bg)}.q3 h3{color:#b45309} .q4{background:var(--slate-bg)}.q4 h3{color:var(--muted)}
-  .todo-item{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;cursor:grab}
-  .todo-item .t{font-size:13px;margin-bottom:5px}
-  .sub-count{font-size:10px;color:var(--muted)}
+.app{display:flex;min-height:100vh}
 
-  .section-title{font-size:13px;font-weight:600;color:var(--muted);margin:16px 0 8px}
-  .row{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 14px;margin-bottom:8px}
-  .row .line{display:flex;justify-content:space-between;align-items:center}
-  .row .left{display:flex;align-items:center;gap:10px}
-  .chk{width:16px;height:16px;border:2px solid var(--line);border-radius:50%;flex-shrink:0}
-  .chk.done{border-color:var(--green);background:var(--green)}
-  .subtask{margin:8px 0 2px 26px;border-left:2px solid var(--line);padding-left:14px}
-  .subtask .st{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:13px;color:var(--muted)}
-  .subtask .st.done{text-decoration:line-through;color:var(--slate)}
-  .progress{height:5px;background:var(--line);border-radius:3px;margin:8px 0 0 26px;overflow:hidden}
-  .progress i{display:block;height:100%;background:var(--green);width:66%}
+/* ---- 侧栏：同纸底 + 发丝线，激活 = 3px 黛蓝左竖线 ---- */
+.sidebar{width:208px;background:var(--paper);border-right:1px solid var(--line);padding:20px 12px;flex-shrink:0}
+.brand{font-family:var(--font-serif);font-size:17px;font-weight:600;padding:0 8px 16px;border-bottom:1px solid var(--line);
+  margin-bottom:14px;letter-spacing:.02em}
+.brand small{display:block;font-family:var(--font-sans);font-weight:400;color:var(--muted);font-size:11px;margin-top:4px}
+.nav button{position:relative;display:flex;width:100%;align-items:center;gap:10px;padding:9px 12px;border:0;background:none;
+  font-size:13.5px;color:var(--ink-soft);cursor:pointer;text-align:left;margin-bottom:1px;
+  transition:background 140ms ease,color 140ms ease}
+.nav button:hover{background:var(--hover-tint);color:var(--ink)}
+.nav button.active{background:none;color:var(--ink);font-weight:600}
+.nav button.active::before{content:"";position:absolute;left:-12px;top:7px;bottom:7px;width:3px;background:var(--accent)}
+.nav .ico{width:18px;display:inline-flex;justify-content:center;color:var(--faint)}
+.nav button.active .ico{color:var(--accent)}
+.nav svg{width:16px;height:16px}
 
-  .cal{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
-  .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:600}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-  .cal-grid .dow{font-size:11px;color:var(--muted);text-align:center;padding:4px 0}
-  .day{min-height:82px;border:1px solid var(--line);border-radius:6px;padding:4px;font-size:11px;vertical-align:top}
-  .day .n{color:var(--muted)}
-  .day.today{border-color:var(--accent);border-width:2px}
-  .day .ev{display:block;margin-top:3px;padding:2px 4px;border-radius:4px;font-size:10px;line-height:1.3}
-  .ev.red{background:var(--red-bg);color:var(--red)} .ev.blue{background:var(--blue-bg);color:var(--blue)}
-  .ev.green{background:var(--green-bg);color:var(--green)}
-  .ev.block{border-left:3px solid var(--blue);font-weight:600}
-  .ev.multiday{background:var(--green-bg);color:var(--green);border-left:3px solid var(--green);font-weight:600}
-  .deadline{display:inline-block;margin-top:2px;font-size:10px;color:var(--red);font-weight:600}
+.main{flex:1;padding:24px 30px;overflow:auto}
+.topbar{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:14px;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.topbar h1{font-family:var(--font-serif);font-size:22px;font-weight:600;letter-spacing:.02em}
+.topbar .date{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.view{display:none}.view.show{display:block}
 
-  .tl-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
-  .range{display:flex;gap:6px}
-  .range button{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:5px 14px;font-size:12px;cursor:pointer}
-  .range button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .ai-badge{font-size:11px;color:var(--green);background:var(--green-bg);padding:4px 10px;border-radius:20px}
-  .tl-month .big{font-size:26px;font-weight:700;margin-right:12px}
-  .tl-nav{color:var(--accent);font-size:13px;cursor:pointer}
-  .lane{border-left:3px solid var(--blue);padding:2px 0 2px 14px;margin:14px 0}
-  .lane h4{font-size:14px;margin-bottom:4px}
-  .lane p{font-size:13px;color:var(--muted);line-height:1.7}
-  .lane ul{margin:6px 0 0 18px;color:var(--muted);font-size:13px;line-height:1.8}
+/* ---- 快速记录：底边线输入行 ---- */
+.quickadd{background:transparent;border:0;border-bottom:1px solid var(--line-strong);padding:10px 2px 12px;
+  color:var(--faint);margin-bottom:22px;cursor:text}
+.quickadd:focus-within{border-bottom-color:var(--accent);box-shadow:0 1px 0 var(--accent)}
 
-  .notes{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-  .note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-height:150px}
-  .note h4{font-size:14px;margin-bottom:6px}.note p{font-size:12px;color:var(--muted);line-height:1.7}
-  .note .meta{margin-top:10px;font-size:11px;color:var(--slate)}
-  .prototype-note{background:var(--amber-bg);border:1px solid #fde68a;color:#92400e;border-radius:8px;
-    padding:8px 12px;font-size:12px;margin-bottom:18px}
+/* 原型说明条：赭色左竖线，不用警告卡片 */
+.prototype-note{border-left:3px solid var(--ochre);background:var(--ochre-soft);color:var(--ochre);
+  padding:8px 12px;font-size:12px;margin-bottom:18px;line-height:1.7}
+
+/* ---- 标签/时间元信息 ---- */
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:var(--r-control);margin-right:6px;
+  border:1px solid var(--line-strong);color:var(--muted);background:transparent;white-space:nowrap}
+.t-red{color:var(--cinnabar);border-color:var(--cinnabar-line)}
+.t-amber{color:var(--ochre);border-color:var(--ochre-line)}
+.t-blue{color:var(--accent);border-color:var(--accent-line)}
+.t-slate{color:var(--stone)}
+.due{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.due.overdue{color:var(--cinnabar);font-weight:600}
+.nosched{font-size:10.5px;color:var(--ochre);font-weight:600;letter-spacing:.04em}
+
+/* ---- 四象限：一张矩阵图 ---- */
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.qcell{padding:14px 16px;min-height:230px;background:var(--paper);display:flex;flex-direction:column}
+.qcell h3{font-family:var(--font-serif);font-size:15px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;
+  gap:8px;color:var(--ink)}
+.qcell h3::before{content:"";width:9px;height:9px;flex-shrink:0}
+.q1 h3::before{background:var(--cinnabar)} .q2 h3::before{background:var(--accent)}
+.q3 h3::before{background:var(--ochre)} .q4 h3::before{background:var(--stone)}
+.qcell .hint{font-size:11.5px;margin-bottom:8px;color:var(--muted)}
+.todo-item{background:transparent;border:0;border-left:3px solid var(--stone);border-bottom:1px solid var(--line);
+  padding:9px 10px 9px 12px;cursor:grab;transition:background 140ms ease}
+.todo-item:hover{background:var(--hover-tint)}
+.q1 .todo-item{border-left-color:var(--cinnabar)} .q2 .todo-item{border-left-color:var(--accent)}
+.q3 .todo-item{border-left-color:var(--ochre)} .q4 .todo-item{border-left-color:var(--stone)}
+.todo-item .t{font-size:13px;margin-bottom:5px}
+.sub-count{font-size:10.5px;color:var(--faint);margin-left:6px}
+
+/* ---- 待办：文档式索引 ---- */
+.section-title{font-size:12px;font-weight:500;color:var(--muted);margin:22px 0 6px;display:flex;align-items:center;
+  gap:10px;letter-spacing:.03em}
+.section-title:first-child{margin-top:4px}
+.section-title::after{content:"";flex:1;height:1px;background:var(--line)}
+.row{background:transparent;border:0;border-bottom:1px solid var(--line);padding:12px 4px}
+.row .line{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.row .left{display:flex;align-items:center;gap:10px;min-width:0}
+.chk{width:16px;height:16px;border:1.5px solid var(--line-strong);border-radius:50%;flex-shrink:0;position:relative;background:transparent}
+.chk.done{border-color:var(--pine)}
+.chk.done::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--pine)}
+.subtask{margin:8px 0 2px 26px;border-left:1px solid var(--line);padding-left:14px}
+.subtask .st{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:13px;color:var(--ink-soft)}
+.subtask .st.done{text-decoration:line-through;color:var(--stone)}
+.progress{height:3px;background:var(--line);margin:10px 0 0 26px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--pine);width:66%}
+
+/* ---- 日历：planner 网格，今日 = 朱砂圆点 ---- */
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;
+  font-family:var(--font-serif);font-size:16px;font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+.cal-grid .dow{font-size:11px;color:var(--muted);text-align:center;padding:6px 0;border-bottom:1px solid var(--line-strong);
+  letter-spacing:.08em}
+.day{min-height:92px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:6px 7px;font-size:11px;vertical-align:top}
+.day:nth-child(7n+1){border-left:1px solid var(--line)}
+.day.is-blank{background:var(--paper)}
+.day .n{color:var(--muted);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px}
+.day.today .n{color:#fff;background:var(--cinnabar);border-radius:50%;font-weight:600}
+.day .ev{display:block;margin-top:4px;padding:2px 4px 2px 6px;font-size:10.5px;line-height:1.4;
+  border-left:3px solid var(--stone);color:var(--ink-soft);background:transparent}
+.ev.red{border-left-color:var(--cinnabar);color:var(--cinnabar)}
+.ev.blue{border-left-color:var(--accent);color:var(--accent)}
+.ev.green{border-left-color:var(--pine);color:var(--pine)}
+.ev.block{border-left:3px solid var(--accent);font-weight:600;color:var(--accent)}
+.ev.multiday{border-left:3px solid var(--pine);font-weight:600;color:var(--pine)}
+.deadline{display:inline-block;margin-top:2px;font-size:10.5px;color:var(--cinnabar);font-weight:600}
+
+/* ---- 时间线：宋体大数字 + 文稿正文 ---- */
+.tl-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.range{display:flex;gap:18px}
+.range button{border:0;border-bottom:2px solid transparent;background:none;padding:5px 0;font-size:12.5px;cursor:pointer;
+  color:var(--muted);transition:color 140ms ease,border-color 140ms ease}
+.range button:hover{color:var(--ink)}
+.range button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.ai-badge{font-size:11.5px;color:var(--muted);padding:2px 0 2px 9px;border-left:2px solid var(--pine)}
+.tl-month{display:flex;align-items:baseline;gap:16px;padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.tl-month .big{font-family:var(--font-serif);font-size:30px;font-weight:600;letter-spacing:.06em;
+  font-variant-numeric:tabular-nums}
+.tl-nav{color:var(--accent);font-size:13px;cursor:pointer}
+.tl-nav:hover{text-decoration:underline}
+.lane{border-left:3px solid var(--accent);padding:2px 0 2px 14px;margin:14px 0;max-width:38em}
+.lane h4{font-family:var(--font-serif);font-size:15px;font-weight:600;margin-bottom:4px}
+.lane p{font-size:13px;color:var(--ink-soft);line-height:1.7}
+.lane ul{margin:6px 0 0 18px;color:var(--muted);font-size:13px;line-height:1.8}
+
+/* ---- 备忘：文档索引 ---- */
+.notes{display:block}
+.note{background:transparent;border:0;border-bottom:1px solid var(--line);padding:14px 6px;cursor:pointer;
+  transition:background 140ms ease}
+.note:hover{background:var(--hover-tint)}
+.note h4{font-family:var(--font-serif);font-size:16px;font-weight:600;margin-bottom:4px}
+.note p{font-size:12.5px;color:var(--muted);line-height:1.7}
+.note .meta{margin-top:8px;font-size:11px;color:var(--muted)}
+
+/* ---- 滚动条 ---- */
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-thumb{background:var(--line-strong)}
+*::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+*::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand">🗂 我的工作台<small>本地优先 · 原型 v2</small></div>
+    <div class="brand">我的工作台<small>本地纯文本，.ics / .md 直读直写</small></div>
     <nav class="nav">
-      <button data-v="quad" class="active"><span class="ico">🎯</span> 四象限</button>
-      <button data-v="todo"><span class="ico">✅</span> 待办</button>
-      <button data-v="cal"><span class="ico">📅</span> 日历</button>
-      <button data-v="tl"><span class="ico">🕘</span> 时间线</button>
-      <button data-v="note"><span class="ico">📝</span> 备忘</button>
+      <button data-v="quad" class="active">
+        <span class="ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="5.4" height="5.4"/><rect x="9.1" y="1.5" width="5.4" height="5.4"/><rect x="1.5" y="9.1" width="5.4" height="5.4"/><rect x="9.1" y="9.1" width="5.4" height="5.4"/></svg></span>
+        四象限
+      </button>
+      <button data-v="todo">
+        <span class="ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="3.1" cy="3.6" r="1.5"/><path d="M2.45 3.6l.45.45.95-1.05"/><path d="M6.6 3.6h7"/><circle cx="3.1" cy="8" r="1.5"/><path d="M2.45 8l.45.45.95-1.05"/><path d="M6.6 8h7"/><circle cx="3.1" cy="12.4" r="1.5"/><path d="M6.6 12.4h7"/></svg></span>
+        待办
+      </button>
+      <button data-v="cal">
+        <span class="ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="3.2" width="12.4" height="11.2" rx="1"/><path d="M1.8 6.6h12.4M5.2 1.8v2.6M10.8 1.8v2.6"/><path d="M4.6 9.4h1.6M7.2 9.4h1.6M9.8 9.4h1.6M4.6 12h1.6M7.2 12h1.6"/></svg></span>
+        日历
+      </button>
+      <button data-v="tl">
+        <span class="ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h12"/><circle cx="4" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="12" cy="8" r="1.4"/></svg></span>
+        时间线
+      </button>
+      <button data-v="note">
+        <span class="ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.8h5.2L12.5 5v9.2H4z"/><path d="M9.2 1.8v3.2h3.3"/><path d="M6 8.4h4.2M6 10.8h4.2"/></svg></span>
+        备忘
+      </button>
     </nav>
-    <div class="foot">数据 = Markdown + .ics<br>软件只是一层皮</div>
   </aside>
 
   <main class="main">
     <div class="topbar"><h1 id="title">四象限</h1><div class="date">2026年9月3日 周四</div></div>
     <div class="quickadd" id="quickadd">＋ 快速记录一件最近要做的事…（先不设时间也可以，回车进入待办）</div>
-    <div class="prototype-note">⚠️ 无逻辑静态原型：假数据，用于确认布局/交互。真实数据由 FastAPI 读 .ics/.md 提供；时间线由 LLM 基于数据生成。</div>
+    <div class="prototype-note">无逻辑静态原型：假数据，用于确认布局/交互。真实数据由 FastAPI 读 .ics/.md 提供；时间线由 LLM 基于数据生成。</div>
 
     <!-- 四象限 -->
     <section class="view show" id="v-quad">
       <div class="quad">
-        <div class="qcell q1"><h3>🔴 重要且紧急 · 立即做</h3><div class="hint">优先级视图 · 同一份待办按重要/紧急归位</div>
+        <div class="qcell q1"><h3>重要且紧急 · 立即做</h3><div class="hint">优先级视图，同一份待办按重要/紧急归位</div>
           <div class="todo-item"><div class="t">简历 V2：突出 40+ 智能体规模化经历</div><span class="tag t-red">求职</span><span class="due overdue">截止 9/8</span></div>
           <div class="todo-item"><div class="t">系统架构师终面准备</div><span class="tag t-red">面试</span><span class="due">9/10 14:00 时间块</span></div>
         </div>
-        <div class="qcell q2"><h3>🔵 重要不紧急 · 计划做</h3><div class="hint">长期价值</div>
+        <div class="qcell q2"><h3>重要不紧急 · 计划做</h3><div class="hint">长期价值</div>
           <div class="todo-item"><div class="t">工作台 M1 只读原型 <span class="sub-count">▸ 子任务 2/3</span></div><span class="tag t-blue">工作台</span><span class="due">本周</span></div>
           <div class="todo-item"><div class="t">回溯梳理 3–8 月主要工作</div><span class="tag t-blue">工作台</span> <span class="nosched">● 未排期</span></div>
           <div class="todo-item"><div class="t">把"本地优先工作台"写成博客</div><span class="tag t-blue">输出</span> <span class="nosched">● 未排期</span></div>
         </div>
-        <div class="qcell q3"><h3>🟠 紧急不重要 · 快做/委托</h3><div class="hint">占时间、价值低</div>
+        <div class="qcell q3"><h3>紧急不重要 · 快做/委托</h3><div class="hint">占时间、价值低</div>
           <div class="todo-item"><div class="t">报销单据贴票提交</div><span class="tag t-amber">行政</span><span class="due">本周内</span></div>
           <div class="todo-item"><div class="t">打印机墨盒该换了</div><span class="tag t-amber">生活</span> <span class="nosched">● 未排期</span></div>
         </div>
-        <div class="qcell q4"><h3>⚪ 不重要不紧急 · 有空再做</h3><div class="hint">想法/以后再说</div>
+        <div class="qcell q4"><h3>不重要不紧急 · 有空再做</h3><div class="hint">想法/以后再说</div>
           <div class="todo-item"><div class="t">给工作台加番茄钟专注模式</div><span class="tag t-slate">想法</span> <span class="nosched">● 未排期</span></div>
           <div class="todo-item"><div class="t">读《团队协作的五大障碍》</div><span class="tag t-slate">成长</span> <span class="nosched">● 未排期</span></div>
         </div>
@@ -136,11 +227,11 @@
 
     <!-- 待办 -->
     <section class="view" id="v-todo">
-      <div class="section-title">📥 未排期 · 最近要做（先记下来，还没归类/定时间）</div>
+      <div class="section-title">未排期 · 最近要做（先记下来，还没归类/定时间）</div>
       <div class="row"><div class="line"><div class="left"><div class="chk"></div><div>回溯梳理 3–8 月主要工作</div></div><span class="tag t-blue">重要</span></div></div>
       <div class="row"><div class="line"><div class="left"><div class="chk"></div><div>把"本地优先工作台"写成技术博客</div></div><span class="tag t-blue">重要</span></div></div>
 
-      <div class="section-title">📌 已排期 · 近期（含可展开的复杂事项/子任务）</div>
+      <div class="section-title">已排期 · 近期（含可展开的复杂事项/子任务）</div>
       <div class="row">
         <div class="line"><div class="left"><div class="chk"></div><div><strong>工作台 M1 只读原型</strong>（复杂事项，含 3 个子任务）</div></div><span class="due">9/3 – 9/7 时间块</span></div>
         <div class="subtask">
@@ -156,28 +247,26 @@
 
     <!-- 日历 -->
     <section class="view" id="v-cal">
-      <div class="cal">
-        <div class="cal-head"><span>‹</span> 2026 年 9 月 <span>›</span></div>
-        <div class="cal-grid">
-          <div class="dow">日</div><div class="dow">一</div><div class="dow">二</div><div class="dow">三</div><div class="dow">四</div><div class="dow">五</div><div class="dow">六</div>
-          <div class="day"><span class="n"></span></div><div class="day"><span class="n"></span></div><div class="day"><span class="n">1</span></div>
-          <div class="day"><span class="n">2</span></div>
-          <div class="day today"><span class="n">3</span><span class="ev block">▸ 原型评审 10:00–11:00</span><span class="ev block">▸ M1开发 14:00–17:00</span></div>
-          <div class="day"><span class="n">4</span><span class="ev block">▸ M1开发 9:30–12:00</span></div><div class="day"><span class="n">5</span></div>
-          <div class="day"><span class="n">6</span></div><div class="day"><span class="n">7</span><span class="ev multiday">▣ M1 联调（跨 7–8 日）</span></div>
-          <div class="day"><span class="n">8</span><span class="ev multiday">▣ M1 联调</span><span class="deadline">⚑ 简历V2 截止</span></div>
-          <div class="day"><span class="n">9</span></div>
-          <div class="day"><span class="n">10</span><span class="ev block">▸ 架构师终面 14:00–15:30</span></div><div class="day"><span class="n">11</span></div>
-          <div class="day"><span class="n">12</span></div>
-          <div class="day"><span class="n">13</span></div><div class="day"><span class="n">14</span></div>
-          <div class="day"><span class="n">15</span><span class="ev green">● 川剧项目复盘会</span></div>
-          <div class="day"><span class="n">16</span></div><div class="day"><span class="n">17</span></div><div class="day"><span class="n">18</span></div><div class="day"><span class="n">19</span></div>
-          <div class="day"><span class="n">20</span></div><div class="day"><span class="n">21</span></div><div class="day"><span class="n">22</span></div><div class="day"><span class="n">23</span></div>
-          <div class="day"><span class="n">24</span></div><div class="day"><span class="n">25</span></div><div class="day"><span class="n">26</span></div>
-          <div class="day"><span class="n">27</span></div><div class="day"><span class="n">28</span></div><div class="day"><span class="n">29</span></div><div class="day"><span class="n">30</span></div>
-        </div>
+      <div class="cal-head"><span>‹</span><span>2026 年 9 月</span><span>›</span></div>
+      <div class="cal-grid">
+        <div class="dow">日</div><div class="dow">一</div><div class="dow">二</div><div class="dow">三</div><div class="dow">四</div><div class="dow">五</div><div class="dow">六</div>
+        <div class="day is-blank"><span class="n"></span></div><div class="day is-blank"><span class="n"></span></div><div class="day"><span class="n">1</span></div>
+        <div class="day"><span class="n">2</span></div>
+        <div class="day today"><span class="n">3</span><span class="ev block">▸ 原型评审 10:00–11:00</span><span class="ev block">▸ M1开发 14:00–17:00</span></div>
+        <div class="day"><span class="n">4</span><span class="ev block">▸ M1开发 9:30–12:00</span></div><div class="day"><span class="n">5</span></div>
+        <div class="day"><span class="n">6</span></div><div class="day"><span class="n">7</span><span class="ev multiday">▣ M1 联调（跨 7–8 日）</span></div>
+        <div class="day"><span class="n">8</span><span class="ev multiday">▣ M1 联调</span><span class="deadline">⚑ 简历V2 截止</span></div>
+        <div class="day"><span class="n">9</span></div>
+        <div class="day"><span class="n">10</span><span class="ev block">▸ 架构师终面 14:00–15:30</span></div><div class="day"><span class="n">11</span></div>
+        <div class="day"><span class="n">12</span></div>
+        <div class="day"><span class="n">13</span></div><div class="day"><span class="n">14</span></div>
+        <div class="day"><span class="n">15</span><span class="ev green">● 川剧项目复盘会</span></div>
+        <div class="day"><span class="n">16</span></div><div class="day"><span class="n">17</span></div><div class="day"><span class="n">18</span></div><div class="day"><span class="n">19</span></div>
+        <div class="day"><span class="n">20</span></div><div class="day"><span class="n">21</span></div><div class="day"><span class="n">22</span></div><div class="day"><span class="n">23</span></div>
+        <div class="day"><span class="n">24</span></div><div class="day"><span class="n">25</span></div><div class="day"><span class="n">26</span></div>
+        <div class="day"><span class="n">27</span></div><div class="day"><span class="n">28</span></div><div class="day"><span class="n">29</span></div><div class="day"><span class="n">30</span></div>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin-top:8px">图例：<b>▸ 色块</b>=执行时间块（DTSTART+DURATION，可跨小时/多天）　<b>⚑ 红旗</b>=截止日（DUE，不占时间）　●=普通事件</p>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.7">图例：<b>▸ 色块</b>=执行时间块（DTSTART+DURATION，可跨小时/多天）　<b>⚑ 红旗</b>=截止日（DUE，不占时间）　●=普通事件</p>
     </section>
 
     <!-- 时间线 -->
@@ -186,7 +275,7 @@
         <div class="range">
           <button class="on">月</button><button>季</button><button>半年</button><button>年</button><button>自定义…</button>
         </div>
-        <span class="ai-badge">✨ 由 LLM 基于待办/日历/备忘生成 · 已生成于 2026-09-01（点此重新生成）</span>
+        <span class="ai-badge">由 LLM 基于待办/日历/备忘生成，已生成于 2026-09-01（点此重新生成）</span>
       </div>
       <div class="tl-month"><span class="big">2026 / 03</span><span class="tl-nav">‹ 上一段　下一段 ›</span></div>
       <p style="color:var(--muted);font-size:13px">主线：川剧智能问答 2.0 上线 + 春招后端面试启动</p>
@@ -201,10 +290,10 @@
     <!-- 备忘 -->
     <section class="view" id="v-note">
       <div class="notes">
-        <div class="note"><h4>工作台数据层设计决策</h4><p>数据用开放格式放在自己手里，软件只是一层皮。待办/日历走 .ics，笔记走 Markdown……</p><div class="meta">2026-09-03 · #架构 #数据主权</div></div>
-        <div class="note"><h4>求职方向思考</h4><p>系统架构师 vs AI 智能体岗。重心转向验证能力、规格驱动开发、AI 治理……</p><div class="meta">2026-09-01 · #求职</div></div>
-        <div class="note"><h4>面试评分表要点</h4><p>架构题看权衡表达，coding 看边界处理，追问看真实深度……</p><div class="meta">2026-03-22 · #招聘</div></div>
-        <div class="note"><h4>混合检索调参记录</h4><p>BM25:向量 权重 0.4/0.6 时命中率最高；Top-K=8……</p><div class="meta">2026-03-15 · #川剧 #技术</div></div>
+        <div class="note"><h4>工作台数据层设计决策</h4><p>数据用开放格式放在自己手里，软件只是一层皮。待办/日历走 .ics，笔记走 Markdown……</p><div class="meta">2026-09-03 #架构 #数据主权</div></div>
+        <div class="note"><h4>求职方向思考</h4><p>系统架构师 vs AI 智能体岗。重心转向验证能力、规格驱动开发、AI 治理……</p><div class="meta">2026-09-01 #求职</div></div>
+        <div class="note"><h4>面试评分表要点</h4><p>架构题看权衡表达，coding 看边界处理，追问看真实深度……</p><div class="meta">2026-03-22 #招聘</div></div>
+        <div class="note"><h4>混合检索调参记录</h4><p>BM25:向量 权重 0.4/0.6 时命中率最高；Top-K=8……</p><div class="meta">2026-03-15 #川剧 #技术</div></div>
       </div>
     </section>
   </main>
