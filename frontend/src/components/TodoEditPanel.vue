@@ -196,7 +196,7 @@ async function doDelete() {
       <span v-else>编辑待办</span>
     </template>
 
-    <div v-if="loadError" class="qa-error">⚠ {{ loadError }}</div>
+    <div v-if="loadError" class="qa-error">{{ loadError }}</div>
     <form v-else-if="node" class="ep-form" @submit.prevent="save">
       <label class="ep-label">标题</label>
       <input v-model="summary" class="ep-input" type="text" maxlength="200" />
@@ -250,13 +250,13 @@ async function doDelete() {
       <!-- 更多：物理删除（仅此入口，两段式确认） -->
       <div v-if="showMore" class="ep-more">
         <template v-if="!confirmDelete">
-          <button type="button" class="btn-danger" :disabled="busy" @click="doDelete">🗑 删除（物理移除）</button>
+          <button type="button" class="btn-danger" :disabled="busy" @click="doDelete">删除（物理移除）</button>
         </template>
         <template v-else>
           <div class="ep-confirm">
             <div>确认物理删除？不可恢复（.backup/ 内有备份）。</div>
             <div v-if="hasChildren" class="ep-confirm-list">
-              ⚠ 将级联删除 {{ node.children.length }} 个子任务：
+              将级联删除 {{ node.children.length }} 个子任务：
               <ul><li v-for="c in node.children" :key="c.uid">{{ c.summary }}</li></ul>
             </div>
             <div class="ep-confirm-btns">
@@ -267,7 +267,7 @@ async function doDelete() {
         </template>
       </div>
 
-      <div v-if="actionError" class="qa-error">⚠ {{ actionError }}</div>
+      <div v-if="actionError" class="qa-error">{{ actionError }}</div>
     </form>
 
     <template #foot>

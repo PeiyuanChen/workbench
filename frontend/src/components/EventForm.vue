@@ -146,7 +146,7 @@ async function doDelete() {
   <BaseModal @close="emit('close')">
     <template #title>{{ isEdit ? "编辑事件" : "新建事件" }}</template>
 
-    <div v-if="loadError" class="qa-error">⚠ {{ loadError }}</div>
+    <div v-if="loadError" class="qa-error">{{ loadError }}</div>
     <form v-else class="ep-form" @submit.prevent="save">
       <label class="ep-label">标题</label>
       <input v-model="summary" class="ep-input" type="text" maxlength="200" placeholder="事件标题" />
@@ -176,7 +176,7 @@ async function doDelete() {
       </div>
       <div v-if="isEdit && showMore" class="ep-more">
         <template v-if="!confirmDelete">
-          <button type="button" class="btn-danger" :disabled="busy" @click="doDelete">🗑 删除事件（物理移除）</button>
+          <button type="button" class="btn-danger" :disabled="busy" @click="doDelete">删除事件（物理移除）</button>
         </template>
         <template v-else>
           <div class="ep-confirm">
@@ -189,7 +189,7 @@ async function doDelete() {
         </template>
       </div>
 
-      <div v-if="formError" class="qa-error">⚠ {{ formError }}</div>
+      <div v-if="formError" class="qa-error">{{ formError }}</div>
       <div v-if="ui.user === 'example'" class="qa-example-hint">正在写入示例数据（data/users/example/）</div>
     </form>
 

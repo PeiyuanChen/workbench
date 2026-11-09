@@ -273,9 +273,10 @@ const editorDefaultMode: EditorMode = "edit";
   <div v-if="notes.current" class="note-detail">
     <button type="button" class="btn-ghost back" @click="notes.close()">‹ 返回笔记列表</button>
     <input v-model="editTitle" class="note-title-input" type="text" maxlength="200" placeholder="标题" />
-    <div class="meta" style="margin-top: 8px; font-size: 11px; color: var(--slate)">
-      {{ notes.current.date }} · {{ notes.current.filename || "根层" }}
-      <span v-if="notes.current.folder" class="tag t-blue">📁 {{ notes.current.folder }}</span>
+    <div class="meta" style="margin-top: 8px; font-size: 11px; color: var(--muted)">
+      {{ notes.current.date }}
+      <span class="mono-path">{{ notes.current.filename || "根层" }}</span>
+      <span v-if="notes.current.folder" class="tag t-blue">{{ notes.current.folder }}</span>
       <span v-else class="tag t-slate">根层散放</span>
       <span v-if="ui.user === 'example'" class="tag t-amber" style="margin-left: 6px">示例数据</span>
     </div>
@@ -289,7 +290,7 @@ const editorDefaultMode: EditorMode = "edit";
       <select v-model="editFolder" class="folder-select">
         <option value="">（根层散放）</option>
         <option v-for="f in flatTree" :key="f.path" :value="f.path">
-          {{ "　".repeat(f.depth - 1) }}📁 {{ f.name }}
+          {{ "　".repeat(f.depth - 1) }}{{ f.name }}
         </option>
       </select>
     </div>
@@ -307,12 +308,12 @@ const editorDefaultMode: EditorMode = "edit";
       <button class="btn-primary" :disabled="saving || !editTitle.trim()" @click="save">
         {{ saving ? "处理中…" : "保存" }}
       </button>
-      <button v-if="!confirmDelete" class="btn-danger-ghost" :disabled="saving" @click="doDelete">🗑 删除</button>
+      <button v-if="!confirmDelete" class="btn-danger-ghost" :disabled="saving" @click="doDelete">删除</button>
       <template v-else>
         <button class="btn-danger" :disabled="saving" @click="doDelete">确认物理删除（.backup/ 有备份）</button>
         <button class="btn-ghost" :disabled="saving" @click="confirmDelete = false">取消</button>
       </template>
-      <span v-if="saveError || deleteError" class="qa-error">⚠ {{ saveError || deleteError }}</span>
+      <span v-if="saveError || deleteError" class="qa-error">{{ saveError || deleteError }}</span>
     </div>
   </div>
 
@@ -328,7 +329,7 @@ const editorDefaultMode: EditorMode = "edit";
         :class="{ on: selectedFolder === null }"
         @click="selectedFolder = null"
       >
-        <span class="tree-label">📚 全部笔记</span>
+        <span class="tree-label">全部笔记</span>
         <span class="tree-count">{{ notes.items.length }}</span>
       </div>
       <div
@@ -336,7 +337,7 @@ const editorDefaultMode: EditorMode = "edit";
         :class="{ on: selectedFolder === '' }"
         @click="selectedFolder = ''"
       >
-        <span class="tree-label">📄 根层散放</span>
+        <span class="tree-label">根层散放</span>
         <span class="tree-count">{{ notes.items.filter((n) => n.folder === '').length }}</span>
       </div>
       <template v-for="node in flatTree" :key="node.path">
@@ -346,7 +347,7 @@ const editorDefaultMode: EditorMode = "edit";
           :style="{ paddingLeft: `${10 + node.depth * 14}px` }"
           @click="selectedFolder = node.path"
         >
-          <span class="tree-label">📁 {{ node.name }}</span>
+          <span class="tree-label">{{ node.name }}</span>
           <span class="tree-actions">
             <button
               type="button"
@@ -354,14 +355,14 @@ const editorDefaultMode: EditorMode = "edit";
               title="重命名（同父目录）"
               @mousedown.prevent
               @click.stop="openRename(node)"
-            >✏️</button>
+            >改名</button>
             <button
               type="button"
-              class="tree-act"
+              class="tree-act tree-act-danger"
               title="删除空文件夹"
               @mousedown.prevent
               @click.stop="openDeleteFolder(node)"
-            >🗑</button>
+            >删除</button>
           </span>
         </div>
       </template>
@@ -385,12 +386,11 @@ const editorDefaultMode: EditorMode = "edit";
         <div v-for="n in visibleNotes" :key="n.id" class="note" @click="open(n.id)">
           <h4>
             {{ n.title }}
-            <span v-if="n.folder" class="tag t-blue folder-badge">📁 {{ n.folder }}</span>
+            <span v-if="n.folder" class="tag t-blue folder-badge">{{ n.folder }}</span>
           </h4>
           <p>{{ n.excerpt }}</p>
           <div class="meta">
-            {{ n.date }}
-            <template v-for="t in n.tags" :key="t"> · #{{ t }}</template>
+            {{ n.date }}<template v-for="t in n.tags" :key="t"> #{{ t }}</template>
           </div>
         </div>
       </div>
@@ -414,10 +414,10 @@ const editorDefaultMode: EditorMode = "edit";
       <select v-model="newFolder" class="folder-select">
         <option value="">（根层散放）</option>
         <option v-for="f in flatTree" :key="f.path" :value="f.path">
-          {{ "　".repeat(f.depth - 1) }}📁 {{ f.name }}
+          {{ "　".repeat(f.depth - 1) }}{{ f.name }}
         </option>
       </select>
-      <div v-if="createNoteError" class="qa-error">⚠ {{ createNoteError }}</div>
+      <div v-if="createNoteError" class="qa-error">{{ createNoteError }}</div>
     </div>
     <template #foot>
       <button class="btn-ghost" @click="showCreateNote = false">取消</button>
@@ -438,7 +438,7 @@ const editorDefaultMode: EditorMode = "edit";
         placeholder="如：读书/2026（保留名 .backup、assets 不可用）"
         @keydown.enter.prevent="submitCreateFolder"
       />
-      <div v-if="folderError" class="qa-error">⚠ {{ folderError }}</div>
+      <div v-if="folderError" class="qa-error">{{ folderError }}</div>
     </div>
     <template #foot>
       <button class="btn-ghost" @click="showCreateFolder = false">取消</button>
@@ -459,7 +459,7 @@ const editorDefaultMode: EditorMode = "edit";
         @keydown.enter.prevent="submitRename"
       />
       <div class="ep-hint">原路径：{{ renamePath }}</div>
-      <div v-if="renameError" class="qa-error">⚠ {{ renameError }}</div>
+      <div v-if="renameError" class="qa-error">{{ renameError }}</div>
     </div>
     <template #foot>
       <button class="btn-ghost" @click="showRename = false">取消</button>
@@ -476,7 +476,7 @@ const editorDefaultMode: EditorMode = "edit";
         确认删除空文件夹 <b>{{ deleteFolderPath }}</b>？<br />
         文件夹内仍有笔记或子文件夹时，后端会拒绝并给出中文提示。
       </p>
-      <div v-if="deleteFolderError" class="qa-error">⚠ {{ deleteFolderError }}</div>
+      <div v-if="deleteFolderError" class="qa-error">{{ deleteFolderError }}</div>
     </div>
     <template #foot>
       <button class="btn-ghost" @click="showDeleteFolder = false">取消</button>

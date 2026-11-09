@@ -133,7 +133,7 @@ function onItemClick(it: CalendarItem) {
             >● {{ label(it) }}</span>
           </template>
         </div>
-        <div v-else class="day" style="border-color: transparent"></div>
+        <div v-else class="day is-blank"></div>
       </template>
     </div>
   </div>

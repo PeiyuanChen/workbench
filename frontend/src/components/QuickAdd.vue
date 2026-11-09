@@ -88,7 +88,7 @@ async function submit() {
         {{ submitting ? "…" : "添加" }}
       </button>
     </div>
-    <div v-if="inlineError" class="qa-error">⚠ {{ inlineError }}</div>
+    <div v-if="inlineError" class="qa-error">{{ inlineError }}</div>
     <div v-if="ui.user === 'example'" class="qa-example-hint">正在写入示例数据（data/users/example/）</div>
   </div>
 </template>
