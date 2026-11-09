@@ -30,7 +30,7 @@ function pad(n: number) {
       <button disabled>年</button>
       <button disabled>自定义…</button>
     </div>
-    <span v-if="tl.data.exists" class="ai-badge">✨ 由 LLM 基于待办/日历/备忘生成 · 可重新生成（M3）</span>
+    <span v-if="tl.data.exists" class="ai-badge">由 LLM 基于待办/日历/备忘生成，可重新生成（M3）</span>
   </div>
 
   <div class="tl-month">
@@ -42,8 +42,7 @@ function pad(n: number) {
   <div v-if="tl.error" class="empty" style="margin-top: 14px">加载失败：{{ tl.error }}</div>
   <div v-else-if="tl.data.exists" class="tl-body">{{ tl.data.body }}</div>
   <div v-else class="tl-empty">
-    <div style="font-size: 24px">🕘</div>
-    <p style="margin-top: 8px">{{ tl.data.message || "该月时间线尚未生成" }}</p>
-    <p style="margin-top: 6px; font-size: 12px">M3 起：点"✨ 生成"由 LLM 汇总该月待办/事件/备忘，落盘为 timeline md。</p>
+    <p>{{ tl.data.message || "该月时间线尚未生成" }}</p>
+    <p style="margin-top: 6px; font-size: 12px">M3 起：点"生成"由 LLM 汇总该月待办/事件/备忘，落盘为 timeline md。</p>
   </div>
 </template>

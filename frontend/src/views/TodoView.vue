@@ -53,10 +53,10 @@ function timeText(t: Todo): string {
 <template>
   <div v-if="todos.error" class="empty">加载失败：{{ todos.error }}</div>
   <div v-else>
-    <div v-if="writeError" class="qa-error" style="margin-bottom: 8px">⚠ {{ writeError }}</div>
+    <div v-if="writeError" class="qa-error" style="margin-bottom: 8px">{{ writeError }}</div>
 
     <!-- 已排期分区：近期 -->
-    <div class="section-title">📌 已排期 · 近期（含可展开的复杂事项/子任务）</div>
+    <div class="section-title">已排期 · 近期（含可展开的复杂事项/子任务）</div>
     <div v-if="!todos.scheduled.length" class="empty">没有已排期待办</div>
     <div v-for="t in todos.scheduled" :key="t.uid" class="row clickable" @click="editingUid = t.uid">
       <div class="line">
@@ -95,7 +95,7 @@ function timeText(t: Todo): string {
     </div>
 
     <!-- 未排期分区：不出现"收件箱"字样 -->
-    <div class="section-title">📥 未排期 · 最近要做（先记下来，还没归类/定时间）</div>
+    <div class="section-title">未排期 · 最近要做（先记下来，还没归类/定时间）</div>
     <div v-if="!todos.unscheduled.length" class="empty">没有未排期待办</div>
     <div v-for="t in todos.unscheduled" :key="t.uid" class="row clickable" @click="editingUid = t.uid">
       <div class="line">

@@ -35,10 +35,10 @@ async function toggleDone(t: Todo) {
 
 // 四象限 = important×urgent 现场计算的视图（与待办同一份数据）
 const cells = [
-  { key: "q1", cls: "q1", tag: "t-red", title: "🔴 重要且紧急 · 立即做", hint: "优先级视图 · 同一份待办按重要/紧急归位" },
-  { key: "q2", cls: "q2", tag: "t-blue", title: "🔵 重要不紧急 · 计划做", hint: "长期价值" },
-  { key: "q3", cls: "q3", tag: "t-amber", title: "🟠 紧急不重要 · 快做/委托", hint: "占时间、价值低" },
-  { key: "q4", cls: "q4", tag: "t-slate", title: "⚪ 不重要不紧急 · 有空再做", hint: "想法/以后再说" },
+  { key: "q1", cls: "q1", tag: "t-red", title: "重要且紧急 · 立即做", hint: "优先级视图，同一份待办按重要/紧急归位" },
+  { key: "q2", cls: "q2", tag: "t-blue", title: "重要不紧急 · 计划做", hint: "长期价值" },
+  { key: "q3", cls: "q3", tag: "t-amber", title: "紧急不重要 · 快做/委托", hint: "占时间、价值低" },
+  { key: "q4", cls: "q4", tag: "t-slate", title: "不重要不紧急 · 有空再做", hint: "想法/以后再说" },
 ] as const;
 
 function timeSpans(t: Todo): { cls: string; text: string }[] {
@@ -55,7 +55,7 @@ function timeSpans(t: Todo): { cls: string; text: string }[] {
 <template>
   <div v-if="todos.error" class="empty">加载失败：{{ todos.error }}</div>
   <div v-else class="quad-page">
-    <div v-if="writeError" class="qa-error" style="margin-bottom: 8px">⚠ {{ writeError }}</div>
+    <div v-if="writeError" class="qa-error" style="margin-bottom: 8px">{{ writeError }}</div>
     <div class="quad">
       <div v-for="cell in cells" :key="cell.key" class="qcell" :class="cell.cls">
         <h3>{{ cell.title }}</h3>

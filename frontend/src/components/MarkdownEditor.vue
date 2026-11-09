@@ -180,11 +180,11 @@ function onDrop(e: DragEvent) {
       <span class="md-sep"></span>
       <!-- 三模式切换：纯编辑 / 分屏 / 纯预览（本地态，不持久化） -->
       <div class="md-mode-switch" role="group" title="编辑模式（仅本次有效，不保存偏好）">
-        <button type="button" :class="{ on: mode === 'edit' }" @click="mode = 'edit'">✏️ 编辑</button>
+        <button type="button" :class="{ on: mode === 'edit' }" @click="mode = 'edit'">编辑</button>
         <button type="button" :class="{ on: mode === 'split' }" @click="mode = 'split'">分屏</button>
-        <button type="button" :class="{ on: mode === 'preview' }" @click="mode = 'preview'">👁 预览</button>
+        <button type="button" :class="{ on: mode === 'preview' }" @click="mode = 'preview'">预览</button>
       </div>
-      <span v-if="uploadError" class="qa-error">⚠ {{ uploadError }}</span>
+      <span v-if="uploadError" class="qa-error">{{ uploadError }}</span>
     </div>
 
     <!-- v-show 而非 v-if：模式切换不销毁 textarea，保留撤销历史与选区 -->

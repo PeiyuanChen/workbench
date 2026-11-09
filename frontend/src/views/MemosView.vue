@@ -110,8 +110,8 @@ async function doDelete() {
   <div v-if="memos.current" class="note-detail">
     <button type="button" class="btn-ghost back" @click="memos.close()">‹ 返回备忘列表</button>
     <input v-model="editTitle" class="note-title-input" type="text" maxlength="200" placeholder="标题" />
-    <div class="meta" style="margin-top: 8px; font-size: 11px; color: var(--slate)">
-      {{ memos.current.date }} · {{ memos.current.filename }}
+    <div class="meta" style="margin-top: 8px; font-size: 11px; color: var(--muted)">
+      {{ memos.current.date }} <span class="mono-path">{{ memos.current.filename }}</span>
       <span v-if="ui.user === 'example'" class="tag t-amber" style="margin-left: 6px">示例数据</span>
     </div>
     <div class="note-tags-row">
@@ -131,12 +131,12 @@ async function doDelete() {
       <button class="btn-primary" :disabled="saving || !editTitle.trim()" @click="save">
         {{ saving ? "处理中…" : "保存" }}
       </button>
-      <button v-if="!confirmDelete" class="btn-danger-ghost" :disabled="saving" @click="doDelete">🗑 删除</button>
+      <button v-if="!confirmDelete" class="btn-danger-ghost" :disabled="saving" @click="doDelete">删除</button>
       <template v-else>
         <button class="btn-danger" :disabled="saving" @click="doDelete">确认物理删除（.backup/ 有备份）</button>
         <button class="btn-ghost" :disabled="saving" @click="confirmDelete = false">取消</button>
       </template>
-      <span v-if="saveError || deleteError" class="qa-error">⚠ {{ saveError || deleteError }}</span>
+      <span v-if="saveError || deleteError" class="qa-error">{{ saveError || deleteError }}</span>
     </div>
   </div>
 
@@ -149,8 +149,7 @@ async function doDelete() {
         <h4>{{ m.title }}</h4>
         <p>{{ m.excerpt }}</p>
         <div class="meta">
-          {{ m.date }}
-          <template v-for="t in m.tags" :key="t"> · #{{ t }}</template>
+          {{ m.date }}<template v-for="t in m.tags" :key="t"> #{{ t }}</template>
         </div>
       </div>
     </div>

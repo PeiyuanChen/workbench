@@ -48,7 +48,7 @@ async function restore(uid: string) {
       {{ open ? "▾" : "▸" }} 已完成 / 已放弃<template v-if="todos.archivedLoaded">（{{ todos.archived.length }}）</template>
     </div>
     <div v-if="open" class="archive-body">
-      <div v-if="error" class="qa-error">⚠ {{ error }}</div>
+      <div v-if="error" class="qa-error">{{ error }}</div>
       <div v-if="!todos.archived.length && !error" class="archive-empty">暂无已完成或已放弃的待办</div>
       <div
         v-for="t in todos.archivedSorted"
