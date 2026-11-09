@@ -162,6 +162,36 @@ body{font-family:var(--font-sans);background:var(--paper);color:var(--ink);font-
 .note p{font-size:12.5px;color:var(--muted);line-height:1.7}
 .note .meta{margin-top:8px;font-size:11px;color:var(--muted)}
 
+/* ---- 笔记：文件夹树 + 文档索引（与 app.css 笔记段同构） ---- */
+.btn-primary{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:var(--r-control);
+  padding:6px 16px;font-size:13px;cursor:pointer;transition:background 140ms ease}
+.btn-primary:hover{background:var(--accent-press);border-color:var(--accent-press)}
+.link-btn{border:0;background:none;color:var(--accent);font-size:12px;cursor:pointer;padding:2px 8px;border-radius:var(--r-control)}
+.link-btn:hover{background:var(--accent-soft)}
+.notes-view{display:grid;grid-template-columns:220px minmax(0,1fr);gap:22px;align-items:stretch}
+@media (max-width:900px){.notes-view{grid-template-columns:1fr}}
+.notes-tree-panel{background:transparent;border:0;border-right:1px solid var(--line);padding:4px 12px 4px 0}
+@media (max-width:900px){.notes-tree-panel{border-right:0;border-bottom:1px solid var(--line);padding-bottom:12px}}
+.tree-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;padding:4px 8px 10px}
+.tree-node{position:relative;display:flex;align-items:center;justify-content:space-between;gap:4px;
+  padding:7px 10px;font-size:13px;cursor:pointer;color:var(--ink-soft)}
+.tree-node:hover{background:var(--hover-tint)}
+.tree-node.on{background:none;color:var(--accent);font-weight:600}
+.tree-node.on::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;background:var(--accent)}
+.tree-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-count{flex-shrink:0;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.tree-node.on .tree-count{color:var(--accent)}
+.tree-actions{display:none;flex-shrink:0;gap:2px}
+.tree-node:hover .tree-actions{display:inline-flex}
+.tree-node:hover .tree-count{display:none}
+.tree-act{border:0;background:none;cursor:pointer;font-size:12px;padding:2px 6px;color:var(--muted);border-radius:var(--r-control)}
+.tree-act:hover{color:var(--accent)}
+.tree-act-danger:hover{color:var(--cinnabar)}
+.notes-main{min-width:0}
+.notes-list-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+.notes-list-title{font-family:var(--font-serif);font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
+.folder-badge{vertical-align:middle;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* ---- 滚动条 ---- */
 *::-webkit-scrollbar{width:8px;height:8px}
 *::-webkit-scrollbar-thumb{background:var(--line-strong)}
@@ -193,6 +223,10 @@ body{font-family:var(--font-sans);background:var(--paper);color:var(--ink);font-
       <button data-v="note">
         <span class="ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.8h5.2L12.5 5v9.2H4z"/><path d="M9.2 1.8v3.2h3.3"/><path d="M6 8.4h4.2M6 10.8h4.2"/></svg></span>
         备忘
+      </button>
+      <button data-v="notes">
+        <span class="ico"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.2h8.6a1 1 0 011 1v10.6l-2.4-1.4-2.2 1.4-2.2-1.4L3.4 13.8V3.2a1 1 0 011-1z"/><path d="M8 2.6v10.8M5.2 5.6h1.6M5.2 8.2h1.6"/></svg></span>
+        笔记
       </button>
     </nav>
   </aside>
@@ -296,11 +330,67 @@ body{font-family:var(--font-sans);background:var(--paper);color:var(--ink);font-
         <div class="note"><h4>混合检索调参记录</h4><p>BM25:向量 权重 0.4/0.6 时命中率最高；Top-K=8……</p><div class="meta">2026-03-15 #川剧 #技术</div></div>
       </div>
     </section>
+
+    <!-- 笔记：真实文件夹树 + 文档索引（笔记模块 T3–T5） -->
+    <section class="view" id="v-notes">
+      <div class="notes-view">
+        <aside class="notes-tree-panel">
+          <div class="tree-head"><span>文件夹</span><button class="link-btn">＋ 新建</button></div>
+          <div class="tree-node on"><span class="tree-label">全部笔记</span><span class="tree-count">6</span></div>
+          <div class="tree-node"><span class="tree-label">根层散放</span><span class="tree-count">2</span></div>
+          <div class="tree-node" style="padding-left:24px">
+            <span class="tree-label">技术</span>
+            <span class="tree-actions"><button class="tree-act">改名</button><button class="tree-act tree-act-danger">删除</button></span>
+            <span class="tree-count">2</span>
+          </div>
+          <div class="tree-node" style="padding-left:24px"><span class="tree-label">求职</span><span class="tree-count">2</span></div>
+        </aside>
+
+        <section class="notes-main">
+          <div class="notes-list-head">
+            <div class="notes-list-title">全部笔记 <span class="tree-count">6</span></div>
+            <button class="btn-primary">＋ 新建笔记</button>
+          </div>
+          <div class="notes">
+            <div class="note">
+              <h4>工作台数据层设计决策 <span class="tag t-blue folder-badge">技术</span></h4>
+              <p>数据用开放格式放在自己手里，软件只是一层皮。待办/日历走 .ics（RFC 5545），备忘与笔记走带 frontmatter 的 Markdown……</p>
+              <div class="meta">2026-09-03 #架构 #数据主权</div>
+            </div>
+            <div class="note">
+              <h4>CalDAV 与 Radicale 接入调研 <span class="tag t-blue folder-badge">技术</span></h4>
+              <p>M3 才接入 Radicale，M2 直读直写文件。记录 Radicale 集合结构、鉴权关闭方式与 .ics 落盘兼容性……</p>
+              <div class="meta">2026-08-28 #caldav #M3</div>
+            </div>
+            <div class="note">
+              <h4>系统架构师面试复盘 <span class="tag t-blue folder-badge">求职</span></h4>
+              <p>终面追问集中在深模块设计与规格驱动开发；权衡表达要先给结论再铺约束，避免一上来堆方案……</p>
+              <div class="meta">2026-09-10 #面试 #复盘</div>
+            </div>
+            <div class="note">
+              <h4>简历 V2 迭代要点 <span class="tag t-blue folder-badge">求职</span></h4>
+              <p>突出 40+ 智能体规模化经历，量化带队结果；项目描述按"约束—决策—结果"三段式重写……</p>
+              <div class="meta">2026-09-06 #简历</div>
+            </div>
+            <div class="note">
+              <h4>周记：W36 复盘</h4>
+              <p>本周完成笔记模块 T3–T5 端到端验收；下周进入 M3 时间线 LLM 生成的 prompt 模板设计……</p>
+              <div class="meta">2026-09-07 #周记</div>
+            </div>
+            <div class="note">
+              <h4>读书摘录：团队协作的五大障碍</h4>
+              <p>缺乏信任 → 惧怕冲突 → 欠缺投入 → 逃避责任 → 无视结果。结合自己带队经历逐条批注……</p>
+              <div class="meta">2026-08-30 #读书 #管理</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
   </main>
 </div>
 
 <script>
-  const titles={quad:'四象限',todo:'待办',cal:'日历',tl:'时间线',note:'备忘'};
+  const titles={quad:'四象限',todo:'待办',cal:'日历',tl:'时间线',note:'备忘',notes:'笔记'};
   const quickViews={quad:'＋ 快速记录一件最近要做的事…（先不设时间也可以，回车进入待办）',
                      todo:'＋ 快速记录一件最近要做的事…（先不设时间也可以，回车进入待办）',
                      note:'＋ 快速记一条备忘…（随手写想法/决策，回车新建一篇）'};
