@@ -13,6 +13,7 @@
 import { nextTick, ref } from "vue";
 import MarkdownView from "./MarkdownView.vue";
 import {
+  enterOnList,
   insertBlock,
   TABLE_TEMPLATE,
   toggleLinePrefix,
@@ -61,6 +62,20 @@ const uploadError = ref("");
 
 function onInput(e: Event) {
   emit("update:modelValue", (e.target as HTMLTextAreaElement).value);
+}
+
+/**
+ * 回车：列表延续 / 空项退出。
+ * Shift+Enter、中文输入法组词态（isComposing）、非折叠选区一律不拦截，
+ * 让浏览器走默认换行；拦截后由纯函数决定新文本与光标位置。
+ */
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+  const next = enterOnList(currentEdit());
+  if (next) {
+    e.preventDefault();
+    applyEdit(next);
+  }
 }
 
 // ------------------------------------------------- 工具栏：选区 Markdown 操作
@@ -197,6 +212,7 @@ function onDrop(e: DragEvent) {
         rows="20"
         :placeholder="placeholder"
         @input="onInput"
+        @keydown="onKeydown"
         @paste="onPaste"
         @dragover.prevent
         @drop="onDrop"

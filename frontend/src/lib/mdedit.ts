@@ -81,6 +81,53 @@ export function toggleLinePrefix(s: EditState, kind: PrefixKind): EditState {
 }
 
 /**
+ * 回车的列表延续规则（调用方负责只在纯 Enter、折叠光标时调用）：
+ * - 当前行是「有内容」的列表项 → 换行并延续同型前缀（有序序号 +1，保留行首缩进）；
+ * - 当前行是「空列表项」（只剩标记、无正文）→ 整行摘除标记，退回普通段落，不再延续；
+ * - 当前行不是列表项 → 返回 null，交回浏览器默认换行。
+ * 无序标记 - * + 原样沿用；有序列表按当前序号自增；光标在行中时由断点切分，
+ * 后半段自然成为新项正文。
+ */
+export function enterOnList(s: EditState): EditState | null {
+  const { value, selStart, selEnd } = s;
+  if (selStart !== selEnd) return null; // 有选区的回车交默认行为（删选区再换行）
+
+  const lineStart = value.lastIndexOf("\n", selStart - 1) + 1;
+  let lineEnd = value.indexOf("\n", selStart);
+  if (lineEnd === -1) lineEnd = value.length;
+  const line = value.slice(lineStart, lineEnd);
+
+  const ul = /^(\s*)([-*+])\s+(.*)$/.exec(line);
+  if (ul) {
+    const [, indent, marker, body] = ul;
+    if (body.trim() === "") {
+      // 空项：整行（含标记）摘除，光标落到原行首成为普通空段落
+      const next = value.slice(0, lineStart) + value.slice(lineEnd);
+      return { value: next, selStart: lineStart, selEnd: lineStart };
+    }
+    const insert = `\n${indent}${marker} `;
+    const next = value.slice(0, selStart) + insert + value.slice(selStart);
+    const caret = selStart + insert.length;
+    return { value: next, selStart: caret, selEnd: caret };
+  }
+
+  const ol = /^(\s*)(\d+)\.\s+(.*)$/.exec(line);
+  if (ol) {
+    const [, indent, numText, body] = ol;
+    if (body.trim() === "") {
+      const next = value.slice(0, lineStart) + value.slice(lineEnd);
+      return { value: next, selStart: lineStart, selEnd: lineStart };
+    }
+    const insert = `\n${indent}${Number(numText) + 1}. `;
+    const next = value.slice(0, selStart) + insert + value.slice(selStart);
+    const caret = selStart + insert.length;
+    return { value: next, selStart: caret, selEnd: caret };
+  }
+
+  return null;
+}
+
+/**
  * 在光标处插入块级文本（图片/表格）：保证与前文之间有空行。
  * focus [起, 止] 为相对插入内容开头的最终选区（如表格首个空格）。
  */

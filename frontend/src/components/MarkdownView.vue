@@ -7,6 +7,7 @@
 // 红线：将来若打开 html:true，必须同时引入 HTML 消毒（DOMPurify）。
 import { computed } from "vue";
 import MarkdownIt, { type RendererRule } from "markdown-it";
+import { parseImageSizeAlt } from "../lib/imgSize";
 
 const props = withDefaults(
   defineProps<{
@@ -48,7 +49,18 @@ function rewriteAssetSrc(src: string): string | null {
   if (!m) return null;
   const parts = m[2].split("/");
   if (parts.some((p) => p === ".." || p === "")) return null;
-  const encoded = parts.map(encodeURIComponent).join("/");
+  // markdown-it 的 normalizeLink 已对非 ASCII 做过一次 percent-encode，
+  // 这里先 decode 再 encode 做幂等归一：纯 ASCII 名不受影响，中文资产名
+  // （笔记文件夹扁平前缀可含中文）避免被二次编码成 %25E8… 而 404。
+  const encoded = parts
+    .map((p) => {
+      try {
+        return encodeURIComponent(decodeURIComponent(p));
+      } catch {
+        return encodeURIComponent(p); // 畸形 % 序列兜底，不吞图
+      }
+    })
+    .join("/");
   const qs = props.user ? `?user=${encodeURIComponent(props.user)}` : "";
   return `${props.imageBase}/${encoded}${qs}`;
 }
@@ -61,6 +73,15 @@ const imageRule: RendererRule = (tokens, idx, options, env, self) => {
   if (typeof src === "string") {
     const rewritten = rewriteAssetSrc(src);
     if (rewritten) token.attrSet("src", rewritten);
+  }
+  // alt 尺寸约定（![w=300](...) / ![w=50%](...)）：原始 alt 在 token.content；
+  // 默认 render_image 会用 children 文本强制回填 alt，故命中后自行设好
+  // alt 并直接 renderToken 绕开回填（默认规则末步本就是 renderToken）
+  const sized = parseImageSizeAlt(token.content);
+  if (sized) {
+    token.attrSet("style", sized.style);
+    token.attrSet("alt", sized.alt);
+    return self.renderToken(tokens, idx, options);
   }
   return defaultImageRule(tokens, idx, options, env, self);
 };
