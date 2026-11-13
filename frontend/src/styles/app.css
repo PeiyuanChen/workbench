@@ -10,8 +10,12 @@
    2. 颜色编码信息（小方块/左竖线/文字），禁止整面 pastel 涂色；
    3. 宋体立骨架（标题/展示时刻），无衬线承担 UI 与正文；
    4. 去 emoji、去 pill、去口号；结构件 0 圆角，控件 3px，浮起面 6px。
+   5. 双主题同构：深色「磁青」只翻转 :root token（data-theme 驱动），
+      颜色一律走变量，组件内禁止写死色值。
    ============================================================ */
 :root {
+  color-scheme: light;      /* 原生控件（select/日期选择/滚动条）按浅色渲染 */
+
   /* ---- 纸与墨 ---- */
   --paper: #f3f4f1;         /* 页面底色：中性雾灰，带极淡绿灰调，非暖奶油 */
   --surface: #fdfdfc;       /* 唯一浮起面：弹层 / 稿纸页 / 编辑器 */
@@ -33,6 +37,7 @@
   --cinnabar: #be432c;      /* 朱砂：Q1 重要紧急 / 危险 / 今日 */
   --cinnabar-soft: #f3e4df;
   --cinnabar-line: #e2c4bc;
+  --cinnabar-press: #a63722; /* 危险实心按钮 hover：加深一档 */
   --ochre: #9a6514;         /* 赭：Q3 紧急不重要（加深至 AA 对比度） */
   --ochre-soft: #f2e9d6;
   --ochre-line: #e3d2b0;
@@ -41,6 +46,12 @@
   --pine-line: #bfd8ca;
   --stone: #78756d;         /* 石灰：Q4 不紧急不重要（加深至 AA 对比度） */
   --stone-soft: #ecebe6;
+
+  /* ---- 实心面与覆盖层 ---- */
+  --on-accent: #fff;        /* 主色/朱砂实心块上的文字色 */
+  --selection: rgba(54, 85, 127, 0.18);  /* 选中文本底色 */
+  --mask: rgba(34, 38, 36, 0.42);        /* 弹层遮罩 */
+  --shadow: rgba(34, 38, 36, 0.16);      /* 浮起面阴影 */
 
   /* ---- 字体（系统栈，零依赖、离线可用） ---- */
   --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong",
@@ -54,6 +65,53 @@
   --r-surface: 6px;         /* 浮起面：弹层/稿纸页 */
 }
 
+/* ============================================================
+   深色主题「磁青」：靛蓝染纸下的同一张档案纸。
+   只翻转 token，结构 / 发丝线 / 字体刻度与浅色完全同构；
+   语义色取矿物颜料提亮——石青（accent）、朱砂、赭石、松绿、石灰。
+   由 index.html 内联脚本 + stores/ui.ts 在 <html> 上落 data-theme。
+   ============================================================ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* ---- 纸与墨 ---- */
+  --paper: #191d25;         /* 磁青纸底：靛蓝染过的深青黑，非中性近黑 */
+  --surface: #21262e;       /* 浮起面：弹层 / 稿纸页 / 编辑器 */
+  --ink: #d8dad3;           /* 素纸白：深底上的暖调近白"墨"色 */
+  --ink-soft: #b4b8b1;      /* 次级强调文字 */
+  --muted: #8b9189;         /* 次级文字（对比度约 5.2:1，达标 AA） */
+  --faint: #6e746c;         /* 装饰性最弱色：计数/滚动条 */
+  --line: #2a303a;          /* 发丝分割线 */
+  --line-strong: #3b4250;   /* 输入框/强分隔 */
+  --hover-tint: rgba(216, 220, 212, 0.06);
+
+  /* ---- 交互主色：石青（黛蓝在深底上的提亮） ---- */
+  --accent: #91b0d6;
+  --accent-press: #a3bede;  /* 实心按钮 hover 提亮（浅色主题是加深） */
+  --accent-soft: #263141;   /* 选中态底衬：暗靛蓝，颜色依旧只点题不涂面 */
+  --accent-line: #3c4d66;
+
+  /* ---- 语义 / 象限色：矿物颜料提亮 ---- */
+  --cinnabar: #d97a62;      /* 朱砂 */
+  --cinnabar-soft: #3a2823;
+  --cinnabar-line: #5e403a;
+  --cinnabar-press: #e28d76;
+  --ochre: #cf9c4a;         /* 赭石 */
+  --ochre-soft: #33291a;
+  --ochre-line: #59462c;
+  --pine: #6cab87;          /* 松绿 */
+  --pine-soft: #22312a;
+  --pine-line: #3c574a;
+  --stone: #a09c92;         /* 石灰 */
+  --stone-soft: #262b34;
+
+  /* ---- 实心面与覆盖层 ---- */
+  --on-accent: #161a21;     /* 亮色块上压近黑字（磁青泥金意） */
+  --selection: rgba(145, 176, 214, 0.28);
+  --mask: rgba(8, 10, 14, 0.62);
+  --shadow: rgba(0, 0, 0, 0.5);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body, #app { height: 100%; }
 body {
@@ -65,7 +123,7 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-::selection { background: rgba(54, 85, 127, 0.18); }
+::selection { background: var(--selection); }
 
 /* 键盘焦点：统一黛蓝描边，鼠标点击不出现 */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -99,15 +157,8 @@ body {
   margin-bottom: 14px;
   letter-spacing: 0.02em;
 }
-.brand small {
-  display: block;
-  font-family: var(--font-sans);
-  font-weight: 400;
-  color: var(--muted);
-  font-size: 11px;
-  margin-top: 4px;
-  letter-spacing: 0;
-}
+/* 主题切换置于品牌标题下（原副标题位），三段控件与标题左缘对齐 */
+.brand .theme-switch { margin-top: 10px; }
 .nav a {
   position: relative;
   display: flex;
@@ -141,14 +192,15 @@ body {
 .nav a.router-link-active .ico { color: var(--accent); }
 .nav svg { width: 16px; height: 16px; }
 
-.datasource {
+/* 侧栏底部偏好区：外观主题 + 数据目录 */
+.sidebar-foot {
   margin-top: auto;
   padding: 12px 8px 4px;
   border-top: 1px solid var(--line);
   font-size: 11px;
   color: var(--muted);
 }
-.datasource select {
+.sidebar-foot select {
   margin-top: 6px;
   width: 100%;
   font-size: 12px;
@@ -159,6 +211,29 @@ body {
   background: var(--surface);
   color: var(--ink);
 }
+/* 主题切换：与 view-switch 同语法的三段控件（发丝线盒、控件 3px 圆角、
+   选中态 accent-soft 底衬），文字动作、无图标 */
+.theme-switch {
+  display: flex;
+  margin-top: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-control);
+}
+.theme-switch button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  color: var(--muted);
+  transition: background 140ms ease, color 140ms ease;
+}
+.theme-switch button + button { border-left: 1px solid var(--line); }
+.theme-switch button:hover:not(.on) { background: var(--hover-tint); color: var(--ink); }
+.theme-switch button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
 .main { flex: 1; padding: 24px 30px; display: flex; flex-direction: column; overflow: hidden; }
 .view-body { flex: 1; min-height: 0; overflow-y: auto; }
@@ -206,7 +281,7 @@ body {
 .qa-toggle.on-imp { background: var(--cinnabar-soft); color: var(--cinnabar); border-color: var(--cinnabar-line); font-weight: 600; }
 .qa-toggle.on-urg { background: var(--ochre-soft); color: var(--ochre); border-color: var(--ochre-line); font-weight: 600; }
 .qa-add {
-  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
   border-radius: var(--r-control); padding: 4px 16px; font-size: 12px; cursor: pointer;
   flex-shrink: 0; transition: background 140ms ease;
 }
@@ -244,7 +319,7 @@ body {
 }
 
 .btn-primary {
-  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
   border-radius: var(--r-control); padding: 6px 18px; font-size: 13px;
   cursor: pointer; transition: background 140ms ease;
 }
@@ -260,11 +335,11 @@ body {
 .btn-ghost.ok:hover { border-color: var(--pine); color: var(--pine); }
 .btn-ghost.warn:hover { border-color: var(--ochre); color: var(--ochre); }
 .btn-danger {
-  border: 1px solid var(--cinnabar); background: var(--cinnabar); color: #fff;
+  border: 1px solid var(--cinnabar); background: var(--cinnabar); color: var(--on-accent);
   border-radius: var(--r-control); padding: 5px 14px; font-size: 12px; cursor: pointer;
   transition: background 140ms ease;
 }
-.btn-danger:hover:not(:disabled) { background: #a63722; border-color: #a63722; }
+.btn-danger:hover:not(:disabled) { background: var(--cinnabar-press); border-color: var(--cinnabar-press); }
 .btn-danger:disabled { opacity: 0.5; cursor: default; }
 .btn-danger-ghost {
   border: 1px solid var(--cinnabar-line); background: transparent; color: var(--cinnabar);
@@ -481,7 +556,7 @@ body {
   height: 18px;
 }
 .day.is-blank { background: var(--paper); }
-.day.today .n { color: #fff; background: var(--cinnabar); border-radius: 50%; font-weight: 600; }
+.day.today .n { color: var(--on-accent); background: var(--cinnabar); border-radius: 50%; font-weight: 600; }
 .day .ev {
   display: block; margin-top: 4px; padding: 2px 4px 2px 6px;
   border-radius: 0; font-size: 10.5px; line-height: 1.4;
@@ -705,7 +780,7 @@ body {
    弹层：唯一的浮起面
    ============================================================ */
 .modal-mask {
-  position: fixed; inset: 0; background: rgba(34, 38, 36, 0.42);
+  position: fixed; inset: 0; background: var(--mask);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 6vh 16px 16px; z-index: 50; overflow: auto;
 }
@@ -714,7 +789,7 @@ body {
   border: 1px solid var(--line);
   border-radius: var(--r-surface);
   width: 100%; max-width: 560px;
-  box-shadow: 0 10px 32px rgba(34, 38, 36, 0.16);
+  box-shadow: 0 10px 32px var(--shadow);
   padding: 18px 22px;
 }
 .modal-head {

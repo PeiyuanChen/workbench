@@ -32,13 +32,15 @@ export interface BuiltExport extends ExportResult {
 }
 
 /**
- * 导出页样式：与 app.css 中 .md-body 块（第 667 行起）保持一致。
+ * 导出页样式：与 app.css 中 .md-body 块保持一致。
  * 导出页会脱离应用独立打开，不能继承全局样式，故变量与规则在此自带；
  * 改 md-body 视觉时需同步这里（这是唯一允许的样式副本，避免引入构建期
- * CSS 抽取依赖）。
+ * CSS 抽取依赖）。深浅双主题：深色 token 与 app.css 的
+ * :root[data-theme="dark"]（磁青）一致，按读者系统偏好生效；打印强制浅色。
  */
 const EXPORT_CSS = `
 :root {
+  color-scheme: light dark;
   --paper: #f3f4f1;
   --surface: #fdfdfc;
   --ink: #222624;
@@ -53,6 +55,19 @@ const EXPORT_CSS = `
     -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
   --r-control: 3px;
+}
+/* 深色「磁青」：跟随读者系统偏好；取值与 app.css :root[data-theme="dark"] 一致 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #191d25;
+    --surface: #21262e;
+    --ink: #d8dad3;
+    --muted: #8b9189;
+    --line: #2a303a;
+    --line-strong: #3b4250;
+    --accent: #91b0d6;
+    --stone-soft: #262b34;
+  }
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -109,6 +124,17 @@ body {
   .export-page { border-radius: 0; border-left: 0; border-right: 0; padding: 24px 18px 32px; }
 }
 @media print {
+  /* 打印强制浅色纸墨：深色系统下避免白纸配浅灰字 */
+  :root {
+    --paper: #f3f4f1;
+    --surface: #fdfdfc;
+    --ink: #222624;
+    --muted: #6e726c;
+    --line: #dbddd6;
+    --line-strong: #c6c9c0;
+    --accent: #36557f;
+    --stone-soft: #ecebe6;
+  }
   body { background: #fff; padding: 0; }
   .export-page { border: 0; padding: 0; max-width: none; }
 }

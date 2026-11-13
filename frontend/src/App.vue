@@ -44,14 +44,40 @@ watch(() => ui.user, reloadAll);
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        我的工作台<small>本地纯文本，.ics / .md 直读直写</small>
+        我的工作台
+        <div class="theme-switch" role="group" aria-label="外观主题">
+          <button
+            type="button"
+            :class="{ on: ui.theme === 'system' }"
+            :aria-pressed="ui.theme === 'system'"
+            @click="ui.setTheme('system')"
+          >
+            系统
+          </button>
+          <button
+            type="button"
+            :class="{ on: ui.theme === 'light' }"
+            :aria-pressed="ui.theme === 'light'"
+            @click="ui.setTheme('light')"
+          >
+            浅色
+          </button>
+          <button
+            type="button"
+            :class="{ on: ui.theme === 'dark' }"
+            :aria-pressed="ui.theme === 'dark'"
+            @click="ui.setTheme('dark')"
+          >
+            深色
+          </button>
+        </div>
       </div>
       <nav class="nav">
         <router-link v-for="n in navItems" :key="n.to" :to="n.to">
           <span class="ico"><AppIcon :name="n.icon" /></span> {{ n.label }}
         </router-link>
       </nav>
-      <div class="datasource">
+      <div class="sidebar-foot">
         数据目录（data/users/）
         <select v-model="ui.user">
           <option value="me">me（我的真实数据）</option>
