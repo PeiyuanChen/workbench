@@ -81,6 +81,54 @@ export function toggleLinePrefix(s: EditState, kind: PrefixKind): EditState {
 }
 
 /**
+ * 引用块切换：选区覆盖的每个非空行加/摘一层 `> ` 前缀。
+ * - 选区所有非空行都已带引用 → 整体摘掉一层（多层引用逐层退）；
+ * - 否则统一加一层，保留行内已有的标题/列表前缀（引用里可以套标题、列表）。
+ * 空行原样保留：空行会中断引用块，需要连续引用时用户可自行给空行补 `>`。
+ */
+export function toggleQuote(s: EditState): EditState {
+  const { value, selStart, selEnd } = s;
+  const lineStart = value.lastIndexOf("\n", selStart - 1) + 1;
+  let lineEnd = value.indexOf("\n", selEnd);
+  if (lineEnd === -1) lineEnd = value.length;
+
+  const block = value.slice(lineStart, lineEnd);
+  const lines = block.split("\n");
+  const nonEmpty = lines.filter((line) => line.trim() !== "");
+  const allQuoted = nonEmpty.length > 0 && nonEmpty.every((line) => line.startsWith(">"));
+
+  const out = lines.map((line) => {
+    if (line.trim() === "") return line;
+    return allQuoted ? line.replace(/^>\s?/, "") : `> ${line}`;
+  });
+
+  const nextBlock = out.join("\n");
+  const next = value.slice(0, lineStart) + nextBlock + value.slice(lineEnd);
+  return { value: next, selStart: lineStart, selEnd: lineStart + nextBlock.length };
+}
+
+/**
+ * 代码块插入/包裹（围栏用 ```，与文档约定一致）：
+ * - 无选区：插入空围栏，光标落在围栏内首行，可直接开始写代码；
+ * - 有选区：把选中文本原样包进围栏（保留缩进，不做任何转义），并选中围栏内文本。
+ * 块前后的空行由 insertBlock 统一保证，避免与上文粘连导致围栏不生效。
+ */
+export function insertCodeBlock(s: EditState): EditState {
+  const { value, selStart, selEnd } = s;
+  if (selStart === selEnd) {
+    return insertBlock(s, "```\n\n```\n", [4, 4]);
+  }
+  const selected = value.slice(selStart, selEnd);
+  const collapsed: EditState = {
+    value: value.slice(0, selStart) + value.slice(selEnd),
+    selStart,
+    selEnd: selStart,
+  };
+  const block = `\`\`\`\n${selected}\n\`\`\`\n`;
+  return insertBlock(collapsed, block, [4, 4 + selected.length]);
+}
+
+/**
  * 回车的列表延续规则（调用方负责只在纯 Enter、折叠光标时调用）：
  * - 当前行是「有内容」的列表项 → 换行并延续同型前缀（有序序号 +1，保留行首缩进）；
  * - 当前行是「空列表项」（只剩标记、无正文）→ 整行摘除标记，退回普通段落，不再延续；

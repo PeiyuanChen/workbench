@@ -20,7 +20,11 @@ const props = withDefaults(
   { user: "", imageBase: "/api/memos/assets" },
 );
 
-const md = new MarkdownIt({ html: false, breaks: false, linkify: true });
+// breaks: true —— GFM 风格软换行：段落内单个换行渲染为 <br>。
+// 严格 CommonMark 下单换行只是空格，但本工作台的备忘/笔记书写习惯是
+// 「Enter 即换行」（与 Obsidian 默认行为一致），故采用 GFM 扩展。
+// 仅影响渲染，不改动 .md 数据本身；空行分段、列表、标题语义不受影响。
+const md = new MarkdownIt({ html: false, breaks: true, linkify: true });
 
 const PROTO_RE = /^[a-z][a-z0-9+.-]*:/i;
 

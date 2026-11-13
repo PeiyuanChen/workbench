@@ -5,18 +5,22 @@
 // - 三模式：edit 纯编辑 / split 分屏（左右）/ preview 纯预览；
 //   模式是组件本地状态，不写入 md、不写入浏览器存储（验收硬要求），
 //   组件随详情页 v-if 重新挂载时自然回到 defaultMode。
+// - 分屏滚动同步：两栏按滚动比例双向跟随（仅 split 模式），回声锁防止
+//   程序化滚动触发的 scroll 事件回环；切模式/正文变更/图片加载/尺寸变化后重算。
 // - 正文经 v-model 双向绑定；预览源由父组件给（备忘/笔记都由标题框合成 H1，
 //   编辑区不出现 H1），资产 URL 改写基址按模块参数化（imageBase）。
 // - 图片三入口（按钮/粘贴/拖放）统一调父组件传入的 uploadImage，
 //   插入服务端返回的 asset.path（笔记已按文件夹深度带 ../ 前缀）。
 // 选区操作复用 lib/mdedit 纯函数，本组件不重写算法。
-import { nextTick, ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import MarkdownView from "./MarkdownView.vue";
 import {
   enterOnList,
   insertBlock,
+  insertCodeBlock,
   TABLE_TEMPLATE,
   toggleLinePrefix,
+  toggleQuote,
   wrapInline,
   type EditState,
   type PrefixKind,
@@ -115,6 +119,14 @@ function onTable() {
   applyEdit(insertBlock(currentEdit(), TABLE_TEMPLATE, [pos, pos]));
 }
 
+function onQuote() {
+  applyEdit(toggleQuote(currentEdit()));
+}
+
+function onCode() {
+  applyEdit(insertCodeBlock(currentEdit()));
+}
+
 // ------------------------------------------------------------- 图片：三种入口
 
 function pickImage() {
@@ -166,6 +178,81 @@ function onDrop(e: DragEvent) {
     void uploadAndInsert(file);
   }
 }
+
+// ------------------------------------------------------------- 分屏滚动同步
+//
+// textarea 与预览是两个独立滚动容器，内容高度并不相等（渲染后的标题/图片/
+// 表格比纯文本高），故按「滚动比例」对齐而非像素对齐：文档首尾精确对齐，
+// 中间段落允许少量偏移。双向跟随，任一栏滚动都带动另一栏。
+const previewRef = ref<HTMLDivElement | null>(null);
+// 回声锁：程序化写 scrollTop 也会派发 scroll 事件，上锁期间忽略对方回调，
+// 避免两栏互相触发造成抖动/回环。
+let syncing = false;
+
+function scrollRatio(el: HTMLElement): number {
+  const max = el.scrollHeight - el.clientHeight;
+  return max <= 0 ? 0 : el.scrollTop / max;
+}
+
+function applyScrollRatio(el: HTMLElement, ratio: number) {
+  const max = el.scrollHeight - el.clientHeight;
+  el.scrollTop = Math.min(1, Math.max(0, ratio)) * max;
+}
+
+/** 把 source 的当前滚动比例套到 target；仅分屏模式生效 */
+function syncScroll(source: HTMLElement | null, target: HTMLElement | null) {
+  if (mode.value !== "split" || !source || !target || syncing) return;
+  syncing = true;
+  applyScrollRatio(target, scrollRatio(source));
+  // 程序化滚动的 scroll 事件是异步任务，setTimeout(0) 排在它之后解锁；
+  // 若赋值未改变位置（不派发回声事件），也由这里兜底解锁。
+  window.setTimeout(() => {
+    syncing = false;
+  }, 0);
+}
+
+function onEditorScroll() {
+  syncScroll(editorRef.value, previewRef.value);
+}
+
+function onPreviewScroll() {
+  syncScroll(previewRef.value, editorRef.value);
+}
+
+/** 预览内图片异步加载完会改变滚动高度，加载完按编辑区位置重新对齐 */
+function onPreviewLoaded(e: Event) {
+  if ((e.target as HTMLElement | null)?.tagName === "IMG") {
+    syncScroll(editorRef.value, previewRef.value);
+  }
+}
+
+// 切到分屏：两栏先对齐一次（预览可能停在上次的滚动位置）
+watch(mode, async (m) => {
+  if (m !== "split") return;
+  await nextTick();
+  syncScroll(editorRef.value, previewRef.value);
+});
+
+// 正文变化 → 预览重渲染、高度改变后，按编辑区比例重新对齐
+watch(
+  () => props.previewSource,
+  async () => {
+    if (mode.value !== "split") return;
+    await nextTick();
+    syncScroll(editorRef.value, previewRef.value);
+  },
+);
+
+// textarea 可纵向拖拽改高，窗口缩放/窄屏断点也会改变栏高，尺寸变化后重算
+let resizeObserver: ResizeObserver | null = null;
+onMounted(() => {
+  resizeObserver = new ResizeObserver(() => {
+    if (mode.value === "split") syncScroll(editorRef.value, previewRef.value);
+  });
+  if (editorRef.value) resizeObserver.observe(editorRef.value);
+  if (previewRef.value) resizeObserver.observe(previewRef.value);
+});
+onBeforeUnmount(() => resizeObserver?.disconnect());
 </script>
 
 <template>
@@ -181,6 +268,8 @@ function onDrop(e: DragEvent) {
       <span class="md-sep"></span>
       <button type="button" title="无序列表" @mousedown.prevent @click="onPrefix('ul')">• 列表</button>
       <button type="button" title="有序列表" @mousedown.prevent @click="onPrefix('ol')">1. 列表</button>
+      <button type="button" title="引用块（行首 >）" @mousedown.prevent @click="onQuote">&gt; 引用</button>
+      <button type="button" title="代码块（```围栏；选中文本可整体包裹）" @mousedown.prevent @click="onCode">代码</button>
       <button type="button" title="表格" @mousedown.prevent @click="onTable">表格</button>
       <button type="button" title="插入图片（也可直接粘贴/拖入）" :disabled="uploading" @mousedown.prevent @click="pickImage">
         {{ uploading ? "上传中…" : "🖼 图片" }}
@@ -216,8 +305,16 @@ function onDrop(e: DragEvent) {
         @paste="onPaste"
         @dragover.prevent
         @drop="onDrop"
+        @scroll="onEditorScroll"
       ></textarea>
-      <div v-show="mode !== 'edit'" class="note-preview">
+      <!-- capture:load：图片 load 事件不冒泡，用捕获阶段委托监听异步加载完成 -->
+      <div
+        v-show="mode !== 'edit'"
+        ref="previewRef"
+        class="note-preview"
+        @scroll="onPreviewScroll"
+        @capture:load="onPreviewLoaded"
+      >
         <MarkdownView :source="previewSource" :user="user" :image-base="imageBase" />
       </div>
     </div>
