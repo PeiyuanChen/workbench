@@ -15,6 +15,29 @@ import { errMsg } from "../lib/format";
 const memos = useMemosStore();
 const ui = useUiStore();
 
+// 列表视图方式：列表（纵向文档索引）/ 网格（n×n 缩略索引）。
+// 仅本组件本地态 + localStorage 记忆；不涉及数据，也不额外请求。
+type MemoViewMode = "list" | "grid";
+const MEMO_VIEW_KEY = "workbench.memos.view";
+
+function loadViewMode(): MemoViewMode {
+  try {
+    return localStorage.getItem(MEMO_VIEW_KEY) === "grid" ? "grid" : "list";
+  } catch {
+    // 隐私模式/禁用存储时静默回退列表
+    return "list";
+  }
+}
+
+const viewMode = ref<MemoViewMode>(loadViewMode());
+watch(viewMode, (mode) => {
+  try {
+    localStorage.setItem(MEMO_VIEW_KEY, mode);
+  } catch {
+    /* 存储不可用时仅本次会话生效 */
+  }
+});
+
 // 编辑表单态：从 current 复制，保存时整体提交（PUT 全文更新语义）
 const editTitle = ref("");
 const editTags = ref("");
@@ -144,14 +167,33 @@ async function doDelete() {
   <template v-else>
     <div v-if="memos.error" class="empty">加载失败：{{ memos.error }}</div>
     <div v-else-if="!memos.items.length" class="empty">暂无备忘（用上方快速记录框新建一篇）</div>
-    <div v-else class="notes">
-      <div v-for="m in memos.items" :key="m.id" class="note" @click="open(m.id)">
-        <h4>{{ m.title }}</h4>
-        <p>{{ m.excerpt }}</p>
-        <div class="meta">
-          {{ m.date }}<template v-for="t in m.tags" :key="t"> #{{ t }}</template>
+    <template v-else>
+      <div class="notes-toolbar">
+        <span class="notes-count">共 {{ memos.items.length }} 篇</span>
+        <div class="view-switch" role="group" aria-label="备忘展示方式">
+          <button
+            type="button"
+            :class="{ on: viewMode === 'list' }"
+            :aria-pressed="viewMode === 'list'"
+            @click="viewMode = 'list'"
+          >列表</button>
+          <button
+            type="button"
+            :class="{ on: viewMode === 'grid' }"
+            :aria-pressed="viewMode === 'grid'"
+            @click="viewMode = 'grid'"
+          >网格</button>
         </div>
       </div>
-    </div>
+      <div class="notes" :class="{ 'as-grid': viewMode === 'grid' }">
+        <div v-for="m in memos.items" :key="m.id" class="note" @click="open(m.id)">
+          <h4>{{ m.title }}</h4>
+          <p>{{ m.excerpt }}</p>
+          <div class="meta">
+            {{ m.date }}<template v-for="t in m.tags" :key="t"> #{{ t }}</template>
+          </div>
+        </div>
+      </div>
+    </template>
   </template>
 </template>
