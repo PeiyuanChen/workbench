@@ -144,22 +144,31 @@ print(quote(sys.stdin.read(), safe=''))" | tr -d '\r'
 }
 
 # ============================================================
-# 0) me/ 只读冒烟：T2 迁移后真实数据在 memos/，且不得残留 notes/
+# 0) me/ 只读冒烟：真实数据可解析、id 前缀各归其位
+#    T2 时 me/ 不含 notes/；T3 起 notes/ 是「笔记」模块的正式目录（ADR-0001），
+#    两目录并存属正常状态，冒烟不得再断言 notes/ 不存在。
 # ============================================================
 echo "=== me/ 只读冒烟（不经过服务器，只读仓库真实数据，不修改）==="
 "$PY" -c "
 from pathlib import Path
 import frontmatter
 me = Path(r'$REPO_ROOT_WIN/data/users/me')
-assert not (me / 'notes').exists(), '真实 me/ 不应残留 notes/（T2 已迁移）'
-memos = me / 'memos'
 n = 0
-for p in memos.glob('*.md'):
+for p in (me / 'memos').glob('*.md'):
     post = frontmatter.load(p)
     assert str(post['id']).split('-')[1] == 'memo', ('真实备忘 id 前缀异常: ' + p.name)
     n += 1
 assert n >= 1, '真实 memos/ 为空'
-print('[0 OK] me/ 无 notes/ 残留，memos/ 下 %d 篇备忘均可解析且 id 均为 memo- 前缀（只读未改）' % n)"
+m = 0
+notes_dir = me / 'notes'
+if notes_dir.exists():
+    for p in notes_dir.rglob('*.md'):
+        if '.backup' in p.parts:
+            continue
+        post = frontmatter.load(p)
+        assert str(post['id']).split('-')[1] == 'note', ('真实笔记 id 前缀异常: ' + p.name)
+        m += 1
+print('[0 OK] memos/ %d 篇备忘 + notes/ %d 篇笔记均可解析且 id 前缀正确（只读未改）' % (n, m))"
 
 # ============================================================
 # 1) 笔记列表基线：扁平 {count, folders, items}，列表不含全文

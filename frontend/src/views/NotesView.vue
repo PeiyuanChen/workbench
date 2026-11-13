@@ -14,6 +14,7 @@ import MarkdownEditor from "../components/MarkdownEditor.vue";
 import type { EditorMode } from "../components/MarkdownEditor.vue";
 import { isInFolder, replaceFolderPrefix } from "../lib/folders";
 import { composeDocBody, composePreview, parseTagsInput, stripLeadH1 } from "../lib/mdedit";
+import { exportNoteHtml } from "../lib/exportHtml";
 import { errMsg } from "../lib/format";
 import type { FolderNode } from "../lib/folders";
 import type { NoteFolder } from "../types";
@@ -33,6 +34,10 @@ const saving = ref(false);
 const saveError = ref("");
 const confirmDelete = ref(false);
 const deleteError = ref("");
+// 导出 HTML：导出中标记 + 成功摘要 / 失败提示
+const exporting = ref(false);
+const exportMsg = ref("");
+const exportError = ref("");
 
 // 右栏预览源：标题以 H1 合成（仅渲染，从不入库）；编辑区不出现 H1
 const previewSource = computed(() => composePreview(editTitle.value, editContent.value));
@@ -60,6 +65,8 @@ watch(
       saveError.value = "";
       confirmDelete.value = false;
       deleteError.value = "";
+      exportMsg.value = "";
+      exportError.value = "";
     }
   },
 );
@@ -141,6 +148,31 @@ async function doDelete() {
 /** 图片上传闭包：归属当前编辑中选择的文件夹（保存时服务端再按最终深度定幂等归一） */
 async function uploadImage(file: File) {
   return notes.uploadAsset(file, editFolder.value, ui.user);
+}
+
+/**
+ * 导出当前笔记为单个自包含 HTML（图片 base64 内嵌，离线可看）。
+ * 以编辑区当前内容为准（含未保存修改）——导出所见即所得；导出不写 data/。
+ */
+async function exportHtml() {
+  if (!notes.current || exporting.value) return;
+  exporting.value = true;
+  exportMsg.value = "";
+  exportError.value = "";
+  try {
+    const res = await exportNoteHtml({
+      title: editTitle.value,
+      markdown: previewSource.value,
+      user: ui.user,
+      imageBase: "/api/notes/assets",
+    });
+    const failedNote = res.failed.length ? `，${res.failed.length} 张图片内嵌失败` : "";
+    exportMsg.value = `已导出 ${res.fileName}（内嵌 ${res.inlined} 张图${failedNote}）`;
+  } catch (e) {
+    exportError.value = errMsg(e);
+  } finally {
+    exporting.value = false;
+  }
 }
 
 // ------------------------------------------------------------- 弹层：新建笔记
@@ -313,7 +345,17 @@ const editorDefaultMode: EditorMode = "edit";
         <button class="btn-danger" :disabled="saving" @click="doDelete">确认物理删除（.backup/ 有备份）</button>
         <button class="btn-ghost" :disabled="saving" @click="confirmDelete = false">取消</button>
       </template>
-      <span v-if="saveError || deleteError" class="qa-error">{{ saveError || deleteError }}</span>
+      <button
+        type="button"
+        class="btn-ghost"
+        :disabled="exporting || saving"
+        title="导出为单个 HTML 文件（图片以 base64 内嵌，离线可打开）"
+        @click="exportHtml"
+      >
+        {{ exporting ? "导出中…" : "导出 HTML" }}
+      </button>
+      <span v-if="saveError || deleteError || exportError" class="qa-error">{{ saveError || deleteError || exportError }}</span>
+      <span v-if="exportMsg" class="export-msg">{{ exportMsg }}</span>
     </div>
   </div>
 

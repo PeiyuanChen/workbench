@@ -699,6 +699,7 @@ body {
 .md-body img { max-width: 100%; height: auto; border-radius: var(--r-control); border: 1px solid var(--line); margin: 8px 0; }
 .md-body hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
 .note-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.export-msg { font-size: 11px; color: var(--muted); }
 
 /* ============================================================
    弹层：唯一的浮起面
